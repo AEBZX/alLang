@@ -1,7 +1,7 @@
 package cn.ae.ast.get;
 
 import cn.ae.ast.basic.GetNode;
-import cn.ae.ast.block.ClassNode;
+import cn.ae.ast.init.block.ClassNode;
 
 public class ObjectNode extends GetNode {
     public ClassNode Class;

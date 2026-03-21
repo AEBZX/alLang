@@ -2,7 +2,7 @@ package cn.ae.ast.command;
 
 import cn.ae.ast.basic.CommandNode;
 import cn.ae.ast.basic.GetNode;
-import cn.ae.ast.init.VarNode;
+import cn.ae.ast.init.var.VarNode;
 
 public class SetNode extends CommandNode {
     public GetNode value;

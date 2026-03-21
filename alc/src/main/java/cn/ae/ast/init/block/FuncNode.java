@@ -1,0 +1,28 @@
+package cn.ae.ast.init.block;
+
+import cn.ae.ast.basic.CommandNode;
+import cn.ae.ast.basic.ListNode;
+import cn.ae.ast.init.var.VarNode;
+import cn.ae.ast.magic.DecoratorNode;
+import cn.ae.type.Type;
+
+import java.util.List;
+
+public class FuncNode extends ListNode {
+    public Type RetType;
+    public List<VarNode> params;
+    public List<DecoratorNode> decorator;
+    public String name;
+
+    protected FuncNode(List<CommandNode> commands, Type RetType, List<VarNode> params, List<DecoratorNode> decorator, String name) {
+        super(commands);
+        this.RetType = RetType;
+        this.params = params;
+        this.name = name;
+        this.decorator = decorator;
+    }
+
+    public static FuncNode create(List<CommandNode> commands, Type RetType, List<VarNode> params, List<DecoratorNode> decorator, String name) {
+        return new FuncNode(commands, RetType, params,decorator, name);
+    }
+}

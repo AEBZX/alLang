@@ -1,7 +1,7 @@
-package cn.ae.ast.init;
+package cn.ae.ast.init.var;
 
 import cn.ae.ast.basic.CommandNode;
-import cn.ae.base.Type;
+import cn.ae.type.Type;
 
 public class VarNode extends CommandNode {
     public String name;

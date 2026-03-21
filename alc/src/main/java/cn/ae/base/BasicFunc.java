@@ -1,5 +1,10 @@
 package cn.ae.base;
 
+import cn.ae.ast.basic.CommandNode;
+import cn.ae.ast.basic.ListNode;
+import cn.ae.ast.init.var.VarNode;
+import cn.ae.type.Type;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -132,14 +137,11 @@ public class BasicFunc {
         remap.put(size, name);
         return size++;
     }
-
-    public long _get(String name) {
-        if (map.containsKey(name)) {
-            return map.get(name);
-        }
-        size--;
-        map.put(name, size);
-        remap.put(size, name);
-        return size;
+    //暂不实现
+    public static long getAddress(VarNode var){
+        return 0;
+    }
+    public static List<CommandNode> ListNodeToCommandList(ListNode list){
+        return new ArrayList<>(list.commands);
     }
 }
