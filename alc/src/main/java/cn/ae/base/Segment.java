@@ -3,9 +3,7 @@ package cn.ae.base;
 import cn.ae.type.CodeToken;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Stack;
 
 public class Segment {
     static int line=1;
@@ -256,7 +254,7 @@ public class Segment {
         }
         if(a){
             for(int i=0;i<word.length();i++){
-                a&=chars[Segment.i]==word.charAt(i);
+                a&=chars[Segment.i+i]==word.charAt(i);
             }
         }
         return a;
@@ -411,6 +409,7 @@ public class Segment {
     public static void str(String a){
         String data="";
         if(a.equals("\"")){
+            i++;
             while(i!=chars.length){
                 if(chars[i]=='"' &&is(-1)&& chars[i-1]!='\\'){
                     i++;
@@ -419,6 +418,7 @@ public class Segment {
                     break;
                 }
                 data+=chars[i];
+                i++;
             }
         }
         if(a.equals("`")){

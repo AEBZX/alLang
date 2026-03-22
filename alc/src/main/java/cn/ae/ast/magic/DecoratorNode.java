@@ -10,7 +10,7 @@ import java.util.List;
 
 public class DecoratorNode extends FuncNode {
     protected DecoratorNode(List<CommandNode> commands, Type RetType, List<VarNode> params, String name) {
-        super(commands, RetType, params,new ArrayList<>(), name);
+        super(commands, RetType, params,new ArrayList<>(),name,false);
     }
     public static DecoratorNode create(List<CommandNode> commands, Type RetType, List<VarNode> params, String name) {
         return new DecoratorNode(commands, RetType, params, name);
