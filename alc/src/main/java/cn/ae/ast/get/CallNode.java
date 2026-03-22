@@ -8,11 +8,12 @@ import java.util.List;
 public class CallNode extends GetNode {
     public FuncNode func;
     public List<GetNode> params;
-    protected CallNode(FuncNode func, List<GetNode> params) {
+    public boolean await;
+    protected CallNode(FuncNode func, List<GetNode> params, boolean await) {
         this.func = func;
         this.params = params;
     }
-    public static CallNode create(FuncNode func, List<GetNode> params) {
-        return new CallNode(func,params);
+    public static CallNode create(FuncNode func, List<GetNode> params, boolean await) {
+        return new CallNode(func,params,await);
     }
 }

@@ -13,8 +13,9 @@ public class FuncNode extends ListNode {
     public List<VarNode> params;
     public List<DecoratorNode> decorator;
     public String name;
+    public boolean async;
 
-    protected FuncNode(List<CommandNode> commands, Type RetType, List<VarNode> params, List<DecoratorNode> decorator, String name) {
+    protected FuncNode(List<CommandNode> commands, Type RetType, List<VarNode> params, List<DecoratorNode> decorator, String name, boolean async) {
         super(commands);
         this.RetType = RetType;
         this.params = params;
@@ -22,7 +23,7 @@ public class FuncNode extends ListNode {
         this.decorator = decorator;
     }
 
-    public static FuncNode create(List<CommandNode> commands, Type RetType, List<VarNode> params, List<DecoratorNode> decorator, String name) {
-        return new FuncNode(commands, RetType, params,decorator, name);
+    public static FuncNode create(List<CommandNode> commands, Type RetType, List<VarNode> params, List<DecoratorNode> decorator, String name, boolean async) {
+        return new FuncNode(commands, RetType, params,decorator, name, async);
     }
 }
