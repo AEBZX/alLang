@@ -77,10 +77,11 @@ public class CodeToken {
             public static final String _bool="bool";
             public static final String _void="void";
             public static final String _char="char";
-            public static final String _pointer="pointer";
             public static final String _long="long";
             public static final String _short="short";
             public static final String _class="class";
+            public static final String _true="true";
+            public static final String _false="false";
         }
         //操作
         public static class operation{
@@ -108,11 +109,14 @@ public class CodeToken {
         //选择/循环
         public static class block{
             public static final String _if="if";
-            public static final String else_if="elif";
+            public static final String else_if="else if";
             public static final String _else="else";
             public static final String _for="for";
             public static final String _while="while";
             public static final String _do="do";
+            public static final String _switch="switch";
+            public static final String _case="case";
+            public static final String _default="default";
             public static final String bool_start="(";
             public static final String bool_end=")";
             public static final String block_start="{";
@@ -255,6 +259,9 @@ public class CodeToken {
             public static final int _for=3;
             public static final int _while=5;
             public static final int _do=2;
+            public static final int _switch=6;
+            public static final int _case=4;
+            public static final int _default=7;
             public static final int bool_start=1;
             public static final int bool_end=1;
             public static final int block_start=1;
