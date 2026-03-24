@@ -11,10 +11,17 @@ public class TokenSegment{
     public char[] code;
     public List<String> token;
     public List<Map<Integer,String>> ret;
+    public int index=0;
+    public int line=1;
     public TokenSegment(List<String> words){
         this.token=words;
     }
     public List<Map<Integer,String>> segment(String str){
         code=str.replace("\r\n","\n").split("");
+        while(index<=code.length){
+            if(co)
+        }
+    }
+    public void str(){
     }
 }
