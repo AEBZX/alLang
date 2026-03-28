@@ -21,6 +21,7 @@ public class FuncNode extends ListNode {
         this.params = params;
         this.name = name;
         this.decorator = decorator;
+        this.async = async;
     }
 
     public static FuncNode create(List<CommandNode> commands, Type RetType, List<VarNode> params, List<DecoratorNode> decorator, String name, boolean async) {
