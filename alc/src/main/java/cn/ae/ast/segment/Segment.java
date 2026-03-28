@@ -15,7 +15,7 @@ public class Segment {
     public List<Word<String>> ret;
     private boolean ctn=false;
     public List<String> tokens;
-    public Segment(String code,List<String> tokens){
+    public Segment(String code, List<String> tokens){
         this.code=code.replace(System.lineSeparator(),"\n").toCharArray();
         this.len=code.length();
         this.tokens=tokens;
@@ -58,7 +58,7 @@ public class Segment {
                 switch (code[index]) {
                     case 'b', 'B' -> {
                         a+="0b";
-                        while ((code[index] >= '0' && code[index] <= '1')||code[index]=='.') {
+                        while ((code[index] >= '0' && code[index] <= '1')||code[index]=='.'||code[index]=='_') {
                             a += code[index];
                             index++;
                         }
@@ -67,14 +67,14 @@ public class Segment {
                         a+="0x";
                         while ((code[index] >= '0' && code[index] <= '9') ||
                                 (code[index] >= 'a' && code[index] <= 'f') || (code[index] >= 'A' && code[index] <= 'F')
-                                || code[index]=='.') {
+                                || code[index]=='.'||code[index]=='_') {
                             a += code[index];
                             index++;
                         }
                     }
                     case 'o', 'O' -> {
                         a+="0o";
-                        while ((code[index] >= '0' && code[index] <= '7')||code[index]=='.') {
+                        while ((code[index] >= '0' && code[index] <= '7')||code[index]=='.'||code[index]=='_') {
                             a += code[index];
                             index++;
                         }
