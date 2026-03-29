@@ -5,7 +5,8 @@ import java.util.List;
 public class Lists {
     public static final List<String> block=List.of(Tokens.FUNC,Tokens.CLASS,Tokens.VAR, Tokens.INTERFACE,
             Tokens.ENUM);
-    public static final List<String> decorator_word_list=List.of(Tokens.PUBLIC,Tokens.PRIVATE,Tokens.PROTECTED,Tokens.STATIC,Tokens.FINAL);
+    public static final List<String> decorator_word_list=List.of(Tokens.PUBLIC,Tokens.PRIVATE,Tokens.PROTECTED,Tokens.STATIC,Tokens.FINAL,
+            Tokens.ASYNC,Tokens.SYNC);
     public static final List<String> precompiler=List.of(
             Tokens.ADD_EQUAL,
             Tokens.SUB_EQUAL,
@@ -86,6 +87,8 @@ public class Lists {
             Tokens.FINAL,
             Tokens.PUBLIC,
             Tokens.PRIVATE,
-            Tokens.PROTECTED
+            Tokens.PROTECTED,
+            Tokens.ASYNC,
+            Tokens.AWAIT
     );
 }

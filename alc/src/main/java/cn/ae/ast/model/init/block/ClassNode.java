@@ -18,7 +18,8 @@ public class ClassNode extends ListNode {
     public List<Decorator> _decorator;
     public String __extends;
     public ClassNode _extends;
-    public ClassNode _implements;
+    public InterfaceNode _implements;
+    public String __implements;
     public boolean _public=false;
     public boolean _static=false;
     public boolean _final=false;

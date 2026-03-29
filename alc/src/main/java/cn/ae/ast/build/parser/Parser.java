@@ -43,28 +43,9 @@ public class Parser {
         }
         return null;
     }
-    //无space空行
-    public Word<String> peek_no_space(){
-        if(have(index+1)){
-            if(words.get(index+1).value.equals(" "))
-                return have(index+2)?words.get(index+2):null;
-            return have(index+1)?words.get(index+1):null;
-        }
-        return null;
-    }
     public Word<String> next(){
         if(have(index)){
             return words.get(index++);
-        }
-        return null;
-    }
-    public Word<String> next_no_space(){
-        if(have(index)){
-            if(words.get(index).value.equals(" ")) {
-                index++;
-                return have(index + 1) ? words.get(index++) : null;
-            }
-            return have(index+1)?words.get(index++):null;
         }
         return null;
     }
@@ -89,6 +70,7 @@ public class Parser {
             Word<String> token=peek();
             if(isDecoratorWord(token)){
                 decorator_words=Match_DecoratorWord();
+                //检查会不会有奇葩标识符
                 test_decorator_word();
                 //希望是func,各种class或者var
                 Word<String> type=match(block,"修饰符后面跟了不是class/func/var的关键词或其他:${token} at "+peek().line);
@@ -102,6 +84,7 @@ public class Parser {
                     case "func"->{}
                     case "var"->{}
                 }
+                decorator_words=new ArrayList<>();
             }
         }
         return ast;
@@ -111,6 +94,7 @@ public class Parser {
      */
     //各种类
     public void _class(String name,int type){
+        if(use_func)Out.Error("不可以在函数里套类 at "+peek().line);
         //有父类
         if(use_class){
             //如果可以套娃
@@ -124,6 +108,7 @@ public class Parser {
         switch (type){
             case CLASS->{
                 class_stack.push(ClassNode.create(new ArrayList<>(), new ArrayList<>(),decorators, name));
+                boolean is_extends=false;
                 //检查是否有继承
                 if(peek().value.equals(Tokens.EXTENDS)) {
                     next();
@@ -131,20 +116,39 @@ public class Parser {
                     if(!peek().type.equals(Word.token_type.OTHER))
                         Out.Error("继承的写法有点问题 at "+peek().line);
                     ls.__extends=next().value;
+                    is_extends=true;
+                }
+                //继承和实现互斥
+                if(peek().value.equals(Tokens.IMPLEMENTS)) {
+                    if(is_extends)Out.Error("继承和实现不可共存 at "+peek().line);
+                    next();
+                    ClassNode ls=class_stack.pop();
+                    if(!peek().type.equals(Word.token_type.OTHER))Out.Error("实现的写法有点问题 at "+peek().line);
+                    ls.__implements=next().value;
                 }
             }
             //不可以继承
             case INTERFACE->{
                 class_stack.push(InterfaceNode.create(new ArrayList<>(), new ArrayList<>(),decorators, name));
                 if(peek().value.equals(Tokens.EXTENDS))Out.Error("接口不能有继承 at "+peek().line);
+                if(peek().value.equals(Tokens.IMPLEMENTS))Out.Error("接口不能有实现 at "+peek().line);
             }
             case ENUM->{
                 class_stack.push(EnumNode.create(new ArrayList<>(),decorators, name));
                 if(peek().value.equals(Tokens.EXTENDS))Out.Error("枚举不能有继承 at "+peek().line);
+                if(peek().value.equals(Tokens.IMPLEMENTS))Out.Error("枚举不能有实现 at "+peek().line);
             }
         }
         use_class=true;
         decorators=new ArrayList<>();
+    }
+    //变量
+    public void _var(String name){
+        if(!use_class||use_func)Out.Error("带修饰符的变量必须定义在类中 at "+peek().line);
+    }
+    //函数,暂不实现
+    public void _func(String name){
+        use_func=true;
     }
     /**
      * @apiNote 检查一堆东西是否合法,不合法就报错
@@ -161,6 +165,18 @@ public class Parser {
         }
         if(have_public|have_private){
             if(have_private&&have_public)Out.Error("修饰符public与private不可共存 at "+decorator_words.get(0).line);
+        }
+        //async和sync互斥
+        boolean have_async=false;
+        boolean have_sync=false;
+        for(Word<String> decorator:decorator_words){
+            if(decorator.value.equals("async"))
+                have_async=true;
+            if(decorator.value.equals("sync"))
+                have_sync=true;
+        }
+        if(have_async|have_sync){
+            if(have_async&&have_sync)Out.Error("修饰符async与sync不可共存 at "+decorator_words.get(0).line);
         }
     }
     /**
@@ -228,11 +244,30 @@ public class Parser {
                         ls.value=typeOf(next());
                         //class param:类名
                         if(peek().value.equals("class")){
+                            next();
+                            if(!peek().type.equals(Word.token_type.OTHER))Out.Error("你这参数是啥子玩意 at "+peek().line);
+                            String name=next().value;
+                            if(!peek().value.equals(":"))Out.Error("你这类对象好像忘声明了 at "+peek().line);
+                            next();
+                            if(!peek().type.equals(Word.token_type.OTHER))Out.Error("你类名被吃掉了 at "+peek().line);
+                            String _class=next().value;
+                            ls.key=name+":"+_class;
+                            ls.value=Type.CLASS;
+                            ret.add(ls);
+                            ls=new Set<>(null,null);
+                            split=false;
+                            type=false;
+                        }else{
+                            ls.value=typeOf(next());
+                            ret.add(ls);
+                            ls=new Set<>(null,null);
                         }
                     }
                 }
             }
         }
+        Out.Error("参数列表的格式有问题 at "+peek().line);
+        return null;
     }
     public Type typeOf(Word<String> type){
         switch (type.value){

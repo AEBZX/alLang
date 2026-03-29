@@ -81,4 +81,7 @@ public class Tokens{
     public static final String PACKAGE="package";
     public static final String EXTENDS="extends";
     public static final String IMPLEMENTS="implements";
+    public static final String ASYNC="async";
+    public static final String SYNC="sync";
+    public static final String AWAIT="await";
 }

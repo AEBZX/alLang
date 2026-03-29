@@ -1,5 +1,7 @@
 package cn.ae.ast.build;
 
+import cn.ae.Main;
+import cn.ae.ast.build.parser.Out;
 import cn.ae.ast.types.Word;
 
 import java.util.*;
@@ -123,6 +125,12 @@ public class Segment {
         }
 
         if (sb.length() > 0) {
+            try{
+                Long.decode(sb.toString());
+            }catch (Exception e){
+                Main.log.error("你这数字有点问题啊:"+sb.toString()+" at:"+line);
+                System.exit(0);
+            }
             result.add(Word.create(sb.toString(), Word.token_type.NUMBER, line));
             return true;
         }
