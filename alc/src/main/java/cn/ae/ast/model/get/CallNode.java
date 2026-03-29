@@ -12,6 +12,7 @@ public class CallNode extends GetNode {
     protected CallNode(FuncNode func, List<GetNode> params, boolean await) {
         this.func = func;
         this.params = params;
+        this.await = await;
     }
     public static CallNode create(FuncNode func, List<GetNode> params, boolean await) {
         return new CallNode(func,params,await);

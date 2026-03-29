@@ -2,7 +2,7 @@ package cn.ae.ast.types;
 
 public class Word<T> {
     public T value;
-    token_type type;
+    public token_type type;
     public int line;
     public static enum token_type{
         NUMBER,STRING,KEYWORD,OTHER
