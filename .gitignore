@@ -1,3 +1,7 @@
 .idea
 .git
 alc/target
+base/dist/
+.lingma
+compiler/node_modules
+compiler/dist
