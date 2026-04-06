@@ -11,7 +11,7 @@ class segment{
     public index:number
     public line:number
     public ret:token[]
-    private line_code:string[]
+    private readonly line_code:string[]
     constructor(code:string,words:word[]) {
         code=code.replace(/\r\n/g,'\n')
         //将words降序排序
@@ -54,10 +54,10 @@ class segment{
             if(this.match_comment()) continue
             //数字字符串
             if(this.match_other()) continue
-            var word_match=false
+            let word_match = false;
             for(let i=0;i<this.words.length;i++){
                 if(!this.match(this.words[i]))continue
-                var a=match(this.code,this.index,match_type.identifier)
+                let a=match(this.code,this.index,match_type.identifier)
                 if(a.o&&a.v!=this.words[i].name){
                     console.log(a)
                     this.index=a.i
@@ -72,7 +72,7 @@ class segment{
             //标识符
             if(!word_match){
                 if(match(this.code,this.index,match_type.identifier).o){
-                    var a=match(this.code,this.index,match_type.identifier)
+                    let a=match(this.code,this.index,match_type.identifier)
                     this.index=a.i-1
                     this.ret.push(new token(a.v,token_type.identifier,this.lines()))
                 }else{
@@ -114,7 +114,7 @@ class segment{
         return false
     }
     match_other():boolean{
-        var a=match(this.code,this.index,match_type.string)
+        let a = match(this.code, this.index, match_type.string);
         if(match(this.code,this.index,match_type.string).o){
             this.ret.push(new token(a.v,token_type.string,this.lines()))
             this.index=a.i

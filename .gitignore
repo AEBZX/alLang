@@ -5,3 +5,4 @@ base/dist/
 .lingma
 compiler/node_modules
 compiler/dist
+model.al

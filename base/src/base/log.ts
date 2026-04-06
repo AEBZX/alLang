@@ -1,6 +1,6 @@
 interface log{
-    error(text:string,line:number):void
-    warn(text:string,line:number):void
-    info(text:string,line:number):void
+    error(text:string,line:string):void
+    warn(text:string,line:string):void
+    info(text:string,line:string):void
 }
 export {log}

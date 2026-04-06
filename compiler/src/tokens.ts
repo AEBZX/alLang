@@ -29,7 +29,7 @@ export default [
     ,_token('interface')
     ,_token('enum')
     //标识符
-    ,_token('package')
+    ,_token('module')
     ,_token('import')
     //变量
     ,_token('this')
