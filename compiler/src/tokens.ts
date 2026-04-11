@@ -1,4 +1,5 @@
-import {token,token_type} from 'allang-compiler-base'
+import {token, token_type} from 'allang-compiler-base'
+
 function _token(keyword:string):token{
     return new token(keyword,token_type.keyword,null)
 }
@@ -102,6 +103,6 @@ export default [
     ,_token('public')
     ,_token('private')
     //其他
-    ,_token('=>')
+    ,_token('->')
     ,_token('...')
 ]

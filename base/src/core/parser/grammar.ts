@@ -21,32 +21,25 @@ function create_match(func:(tool:tools)=>boolean,error:(log:log,tool:tools)=>voi
         error:error
     }
 }
-function root_match(tool:tools,log:log,parser:(child:Tree[])=>Tree,...match:{func:((tool:tools)=>boolean)
-    ,error:(log:log,tool:tools)=>void,to:(tool:tools)=>Tree}[]){
-    let func=(tool:tools):boolean=>{
-        for(let i=0;i<match.length;i++){
-            if(!match[i].func(tool)){
-                tool.add(new error_tree(i))
+function root_match(tool:tools,parser:(child:Tree[])=>Tree,...match:{func:((tool:tools)=>boolean)
+    ,error:(log:log,tool:tools)=>void,to:(tool:tools)=>Tree}[]):Tree{
+    let func=(tool:tools):boolean=> {
+        for (let i = 0; i < match.length; i++) {
+            if (!match[i].func(tool)) {
                 return false
-            }else
+            } else
                 tool.add(match[i].to(tool))
         }
         return true
     }
-    let to=(tool:tools):Tree=>parser(tool.get().filter((tree)=>tree.type!=-1))
-    let error=(log:log,tool:tools):void=>{
-        match[(tool.get()[0] as error_tree).id].error(log,tool)
-    }
-    return create_match(func,error,to)
+    return parser(tool.get().filter((tree)=>tree.type!=-1))
 }
-function list_match(parser:(child:Tree[])=>Tree,
+function list_match(parser:(child:Tree[])=>Tree,error:(log:log,tool:tools)=>void,
                     ...match:{func:((tool:tools)=>boolean),error:(log:log,tool:tools)=>void,
                         to:(tool:tools)=>Tree}[]){
     let func=(tool:tools):boolean=>{
-        tool.backup()
         for(let i=0;i<match.length;i++){
             if(!match[i].func(tool)){
-                tool.add(new error_tree(i))
                 return false
             }else
                 tool.add(match[i].to(tool))
@@ -54,60 +47,55 @@ function list_match(parser:(child:Tree[])=>Tree,
         return true
     }
     let to=(tool:tools):Tree=>parser(tool.get().filter((tree)=>tree.type!=-1))
-    let error=(log:log,tool:tools):void=>{
-        match[(tool.get()[0] as error_tree).id].error(log,tool)
-    }
     return create_match(func,error,to)
 }
 function while_match(parser:(child:Tree[])=>Tree,
                      start:{func:((tool:tools)=>boolean),error:(log:log,tool:tools)=>void,
     to:(tool:tools)=>Tree},end:{func:((tool:tools)=>boolean),error:(log:log,tool:tools)=>void,
     to:(tool:tools)=>Tree},data:{func:((tool:tools)=>boolean),error:(log:log,tool:tools)=>void,
-    to:(tool:tools)=>Tree}){
+    to:(tool:tools)=>Tree},split:{func:((tool:tools)=>boolean),error:(log:log,tool:tools)=>void,
+        to:(tool:tools)=>Tree},error:(log:log,tool:tools)=>void){
     let func=(tool:tools):boolean=>{
-        tool.backup()
-        tool.add(new error_tree(0))
         if(!start.func(tool))return false
         tool.add(start.to(tool))
+        let _split=false
         while(true){
             if(!data.func(tool)){
-                tool.add(new error_tree(1))
                 if(end.func(tool)){
                     tool.add(end.to(tool))
                     return true
                 }
-                tool.add(new error_tree(2))
+                if(split.func(tool)){
+                    if(_split)return false
+                    _split=true
+                    tool.add(split.to(tool))
+                    continue
+                }
                 return false
             }
+            _split=false
             tool.add(data.to(tool))
         }
     }
     let to=(tool:tools):Tree=>parser(tool.get().filter((tree)=>tree.type!=-1))
-    let error=(log:log,tool:tools):void=>{
-        switch ((tool.get()[0] as error_tree).id){
-            case 0:
-                start.error(log,tool)
-                break
-            case 1:
-                data.error(log,tool)
-                break
-            case 2:
-                end.error(log,tool)
-                break
+    return create_match(func,error,to)
+}
+function or_match(parser:(child:Tree[])=>Tree,error:(log:log,tool:tools)=>void,
+                  ...match:{func:((tool:tools)=>boolean),error:(log:log,tool:tools)=>void,
+                      to:(tool:tools)=>Tree}[]){
+    let func=(tool:tools):boolean=>{
+        for(let i=0;i<match.length;i++){
+            if(match[i].func(tool)){
+                tool.add(match[i].to(tool))
+                return true
+            }
         }
+        return false
     }
+    let to=(tool:tools):Tree=>parser(tool.get().filter((tree)=>tree.type!=-1))
     return create_match(func,error,to)
 }
 class Tree{
     type:number
 }
-//标识符树
-class error_tree extends Tree{
-    id:number
-    constructor(id:number){
-        super()
-        this.id=id
-        this.type=-1
-    }
-}
-export {tools,Tree,list_match,root_match,create_match,while_match,error_tree}
+export {tools,Tree,list_match,root_match,create_match,while_match,or_match}
