@@ -22,6 +22,9 @@ export default class allang_tools implements tools {
     get(): Tree[] {
         return this.buffer
     }
+    getAndFlush():Tree{
+        return this.buffer.pop()
+    }
     peek(): token {
         return this.tokens[this.index+1]?this.tokens[this.index+1]:null
     }

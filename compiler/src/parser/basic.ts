@@ -1,8 +1,9 @@
 import allang_log from '../allang_log'
 import allang_tools from '../allang_tools'
 import {chain_get, object_get_tree} from './get'
-import {token, token_type, Tree, create_match, tools,while_match} from 'allang-compiler-base'
-import {basic_type, bool_oper_type, math_oper_type, pointer_type, tree_type} from '../model'
+import {create_match, tools, Tree, while_match} from 'allang-compiler-base'
+import {tree_type} from '../model'
+
 class param_get_tree extends Tree{
     param:object_get_tree[]
     constructor(param:object_get_tree[]){
@@ -10,27 +11,6 @@ class param_get_tree extends Tree{
         this.param=param
         this.type=tree_type.get_param
     }
-}
-function match_right_small_bracket(tool:allang_tools){
-    return tool.now().name==')'
-}
-function match_left_small_bracket(tool:allang_tools){
-    return tool.now().name=='('
-}
-function match_right_big_bracket(tool:allang_tools){
-    return tool.now().name=='}'
-}
-function match_left_big_bracket(tool:allang_tools){
-    return tool.now().name=='{'
-}
-function match_left_bracket(tool:allang_tools){
-    return tool.now().name=='['
-}
-function match_right_bracket(tool:allang_tools){
-    return tool.now().name==']'
-}
-function match_token(token:string,tool:allang_tools){
-    return tool.now().name==token
 }
 class token_node extends Tree{
     token:string
@@ -45,9 +25,6 @@ function get_param(tool:allang_tools,log:allang_log){
     let end=create_match(match_right_small_bracket,
         (log:allang_log,tool:tools)=>log.error('参数块没有闭合',tool.now().line),
         (tool:tools):token_node=>new token_node(')'))
-    let data=chain_get((log:allang_log,tool:tools)=>{
-        log.error('参数错误',tool.now().line)
-    })
     let parser=(child:Tree[]):param_get_tree=>{
         //get,get,...
         let split=true,param:object_get_tree[]=[]
@@ -65,5 +42,6 @@ function get_param(tool:allang_tools,log:allang_log){
         })
         return new param_get_tree(param)
     }
-    return while_match(parser,start,end, data)
 }
+export {param_get_tree,get_param,token_node,while_match,create_match,match_right_small_bracket,match_left_small_bracket,
+match_right_big_bracket,match_left_big_bracket,match_left_bracket,match_right_bracket,match_token}
