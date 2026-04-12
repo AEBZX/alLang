@@ -78,10 +78,12 @@ function match_number(code:string[], start:number):{i:number,v:string,o:boolean}
     if(code[i]=='0'){
         o=true
         v+='0'
-        var point=false
-        if(code[i+1]=='x'||code[i+1]=='X'){
+        if(!code[i+1])
+            v='0'
+        else if(code[i+1]=='x'||code[i+1]=='X'){
             v+='x'
             i+=2
+            let ls=i-1
             while(i<code.length){
                 if(code[i]==' '){
                     break
@@ -91,9 +93,14 @@ function match_number(code:string[], start:number):{i:number,v:string,o:boolean}
                 v+=code[i]
                 i++
             }
+            //负号检查
+            if(ls-1>=0&&code[ls-1]=='-'){
+                v='-'+v
+            }
         }else if(code[i+1]=='b'||code[i+1]=='B'){
             v+='b'
             i+=2
+            let ls=i-1
             while(i<code.length){
                 if(code[i]==' '){
                     break
@@ -103,9 +110,13 @@ function match_number(code:string[], start:number):{i:number,v:string,o:boolean}
                 v+=code[i]
                 i++
             }
+            if(ls-1>=0&&code[ls-1]=='-'){
+                v='-'+v
+            }
         }else if(code[i+1]=='o'||code[i+1]=='O'){
             v+='o'
             i+=2
+            let ls=i-1
             while(i<code.length){
                 if(code[i]==' '){
                     break
@@ -115,13 +126,44 @@ function match_number(code:string[], start:number):{i:number,v:string,o:boolean}
                 v+=code[i]
                 i++
             }
+            if(ls-1>=0&&code[ls-1]=='-'){
+                v='-'+v
+            }
         }else{
             o=true
             i++
             v='0'
+            let ls=i-1
+            if(code[i]=='.'){
+                v+='.'
+                while(i<code.length){
+                    if(code[i]==' ')
+                        break
+                    if(!(code[i]>='0'&&code[i]<='9'))
+                        break
+                    v+=code[i]
+                    i++
+                }
+                i++
+                if(code[i]>='0'&&code[i]<='9'){
+                    while(i<code.length){
+                        if(code[i]==' ')
+                            break
+                        if(!(code[i]>='0'&&code[i]<='9'))
+                            break
+                        v+=code[i]
+                        i++
+                    }
+                }
+                if(ls-1>=0&&code[ls-1]=='-'){
+                    v='-'+v
+                }
+            }
         }
     }else if(code[i]>='1'&&code[i]<='9'){
         o=true
+        let point=false
+        let ls=i-1
         while(i<code.length){
             if(code[i]==' ')break
             if(!(code[i]>='0'&&code[i]<='9'||code[i]=='.')){
@@ -135,8 +177,10 @@ function match_number(code:string[], start:number):{i:number,v:string,o:boolean}
                 if(point)break
                 point=true
             }
-            v+=code[i]
             i++
+        }
+        if(ls-1>=0&&code[ls-1]=='-'){
+            v='-'+v
         }
     }
     return {i,v,o}

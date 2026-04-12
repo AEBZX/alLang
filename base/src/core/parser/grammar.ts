@@ -32,7 +32,7 @@ function root_match(tool:tools,parser:(child:Tree[])=>Tree,...match:{func:((tool
         }
         return true
     }
-    return parser(tool.get().filter((tree)=>tree.type!=-1))
+    return func(tool)?parser(tool.get().filter((tree)=>tree.type!=-1)):null
 }
 function list_match(parser:(child:Tree[])=>Tree,error:(log:log,tool:tools)=>void,
                     ...match:{func:((tool:tools)=>boolean),error:(log:log,tool:tools)=>void,

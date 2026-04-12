@@ -121,6 +121,9 @@ class segment{
             return true
         }else if(match(this.code,this.index,match_type.number).o){
             a=match(this.code,this.index,match_type.number)
+            if(a.v.startsWith('-')){
+                this.ret.pop()
+            }
             this.ret.push(new token(a.v,token_type.number,this.lines()))
             this.index=a.i
             return true
