@@ -9,7 +9,23 @@ export default class allang_tools implements tools {
         this.index = 0
         this.back = []
     }
-
+    _match_word(name:string,ok:()=>void,fail:()=>void){
+        if(this.tokens[this.index]&&this.tokens[this.index].name==name){
+            this.next()
+            ok()
+        }else fail()
+    }
+    _matches_word(name:string[],ok:(t:token)=>void,fail:()=>void){
+        if(this.tokens[this.index]&&name.includes(this.tokens[this.index].name)){
+            ok(this.next())
+        }else fail()
+    }
+    _match_type(type:token_type,ok:()=>void,fail:()=>void){
+        if(this.tokens[this.index]&&this.tokens[this.index].type== type){
+            this.next()
+            ok()
+        }else fail()
+    }
     add(tree: Tree): void {
         throw new Error("Method not implemented.")
     }
