@@ -69,7 +69,7 @@ function match_import(tool:allang_tools,log:allang_log,tree:Tree[]):Tree[] {
     tool.kill()
     return tree
 }
-//import集群
+//匹配import集群
 function match_imports(tool:allang_tools,log:allang_log,tree:Tree[]):Tree[] {
     tool.backup()
     let ret:Tree[]=[]
