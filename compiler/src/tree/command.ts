@@ -1,9 +1,10 @@
 import {Tree} from 'allang-compiler-base'
 import {math_oper_type} from '../model'
 import {
+    bool_oper_get_tree,
     call_get_tree,
     chain_get_tree,
-    get_node_tree,
+    get_node_tree, get_tree,
     math_oper_get_tree,
     variable_get_tree
 } from './get'
@@ -12,6 +13,58 @@ import {block_tree} from './block'
 //基本指令
 //call操作,return,continue,break,a=b,super,delete,运算,声明变量,throw get_node
 class command_tree extends block_tree {
+}
+//if,while,do-while,for,switch,foreach等
+class if_tree extends command_tree {
+    condition: bool_oper_get_tree
+    else_if: if_tree[]
+    else: block_tree
+    constructor(condition:bool_oper_get_tree, block: block_tree, else_if: if_tree[], _else: block_tree) {
+        super([block])
+        this.condition = condition
+        this.else_if = else_if
+        this.else = _else
+    }
+}
+class while_tree extends command_tree {
+    condition: bool_oper_get_tree
+    do:boolean
+    constructor(condition:bool_oper_get_tree, block: block_tree, _do:boolean) {
+        super([block])
+        this.condition = condition
+        this.do = _do
+    }
+}
+class for_tree extends command_tree {
+    init: identifier_var_tree[]
+    condition: bool_oper_get_tree
+    step: command_tree[]
+    constructor(init: identifier_var_tree[], condition: bool_oper_get_tree, block: block_tree, step: command_tree[]) {
+        super([block])
+        this.init = init
+        this.condition = condition
+        this.step = step
+    }
+}
+class switch_tree extends command_tree {
+    condition: get_node_tree
+    cases: {value:get_tree,call:block_tree }[]
+    default: block_tree
+    constructor(condition: get_node_tree, cases: {value:get_tree,call:block_tree}[], default_block: block_tree) {
+        super(null)
+        this.condition = condition
+        this.cases = cases
+        this.default = default_block
+    }
+}
+class foreach_tree extends command_tree {
+    identifier: identifier_var_tree
+    array: get_node_tree
+    constructor(identifier: identifier_var_tree, array: get_node_tree, block: block_tree) {
+        super([block])
+        this.identifier = identifier
+        this.array = array
+    }
 }
 class throw_tree extends command_tree{
     value: get_node_tree[]
@@ -72,12 +125,12 @@ class continue_tree extends command_tree {
 class call_tree extends command_tree{
     value: call_get_tree
     name: string
-    await:boolean
-    constructor(name: string, value: call_get_tree,await:boolean) {
+    _await:boolean
+    constructor(name: string, value: call_get_tree,_await:boolean) {
         super(null)
         this.name = name
         this.value = value
-        this.await = await
+        this._await = _await
     }
 }
 //super(123456)
@@ -87,4 +140,8 @@ class super_tree extends call_tree {
     }
 }
 export {super_tree,call_tree,break_tree,return_tree
-    ,math_set_tree,delete_tree,set_tree,identifier_var_tree,command_tree,throw_tree,continue_tree}
+    ,math_set_tree,delete_tree,set_tree,identifier_var_tree,command_tree,throw_tree,continue_tree,if_tree,
+    while_tree,
+    for_tree,
+    switch_tree,
+    foreach_tree,}

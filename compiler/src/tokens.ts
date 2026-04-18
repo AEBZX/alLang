@@ -29,13 +29,13 @@ export default [
     ,_token('in')
     ,_token('instanceof')
     //封装块
-    ,_token('function')
     ,_token('class')
     ,_token('interface')
     ,_token('enum')
     //标识符
     ,_token('module')
     ,_token('import')
+    ,_token('as')
     //变量
     ,_token('this')
     ,_token('super')

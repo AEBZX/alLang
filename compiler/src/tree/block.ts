@@ -33,59 +33,6 @@ class block_tree extends Tree {
         this.commands = commands
     }
 }
-//if,while,do-while,for,switch,foreach等
-class if_tree extends command_tree {
-    condition: bool_oper_get_tree
-    else_if: if_tree[]
-    else: block_tree
-    constructor(condition:bool_oper_get_tree, block: block_tree, else_if: if_tree[], _else: block_tree) {
-        super([block])
-        this.condition = condition
-        this.else_if = else_if
-        this.else = _else
-    }
-}
-class while_tree extends command_tree {
-    condition: bool_oper_get_tree
-    do:boolean
-    constructor(condition:bool_oper_get_tree, block: block_tree, _do:boolean) {
-        super([block])
-        this.condition = condition
-        this.do = _do
-    }
-}
-class for_tree extends command_tree {
-    init: identifier_var_tree[]
-    condition: bool_oper_get_tree
-    step: command_tree[]
-    constructor(init: identifier_var_tree[], condition: bool_oper_get_tree, block: block_tree, step: command_tree[]) {
-        super([block])
-        this.init = init
-        this.condition = condition
-        this.step = step
-    }
-}
-class switch_tree extends command_tree {
-    condition: get_node_tree
-    cases: {value:get_tree,call:block_tree }[]
-    default: block_tree
-    constructor(condition: get_node_tree, cases: {value:get_tree,call:block_tree}[], default_block: block_tree) {
-        super(null)
-        this.condition = condition
-        this.cases = cases
-        this.default = default_block
-    }
-}
-class foreach_tree extends command_tree {
-    identifier: identifier_var_tree
-    array: get_node_tree
-    constructor(identifier: identifier_var_tree, array: get_node_tree, block: block_tree) {
-        super([block])
-        this.identifier = identifier
-        this.array = array
-    }
-}
-
 /*
  * try{
  *  ...
@@ -139,52 +86,44 @@ class func_tree extends body {
         this.return_type = return_type
     }
 }
-class class_tree extends Tree{
-    extends: string
-    implements: string[]
-    variable:var_tree[]
-    func:func_tree[]
+class space_tree extends Tree{
     modifiers:modifiers
     annotations:annotation_tree[]
     name:string
-    constructor(name:string, _extends: string, _implements: string[], variable:var_tree[], func:func_tree[],
-                modifiers:modifiers, annotations:annotation_tree[]) {
+    children: space_tree[]
+    constructor(name:string,modifiers:modifiers, annotations:annotation_tree[]) {
         super()
         this.name = name
         this.modifiers = modifiers
         this.annotations = annotations
+        this.children=[]
+    }
+}
+class class_tree extends space_tree{
+    extends: string
+    implements: string[]
+    constructor(name:string, _extends: string, _implements: string[],
+                modifiers:modifiers, annotations:annotation_tree[]) {
+        super(name,modifiers,annotations)
         this.extends = _extends
         this.implements = _implements
-        this.variable = variable
-        this.func = func
     }
 }
 class enum_tree extends class_tree{
     values: string[]
     constructor(name:string,modifiers:modifiers, annotations:annotation_tree[], values: string[]) {
-        super(name,null,null,null,null,modifiers, annotations)
+        super(name,null,null,modifiers, annotations)
         this.values = values
     }
 }
 class interface_tree extends class_tree{
-    constructor(name:string,modifiers:modifiers, annotations:annotation_tree[],variable:var_tree[],
-                values: func_tree[]) {
-        super(name,null,null,variable,values,modifiers, annotations)
+    constructor(name:string,modifiers:modifiers, annotations:annotation_tree[]) {
+        super(name,null,null,modifiers, annotations)
     }
 }
-class module_tree extends Tree {
-    name:string
-    variable:var_tree[]
-    func:func_tree[]
-    class:class_tree[]
-    children:module_tree[]
-    constructor(name:string,variable:var_tree[], func:func_tree[], _class:class_tree[], children:module_tree[]) {
-        super()
-        this.name = name
-        this.variable = variable
-        this.func = func
-        this.class = _class
-        this.children = children
+class module_tree extends space_tree {
+    constructor(name:string,modifiers:modifiers, annotations:annotation_tree[]) {
+        super(name,modifiers,annotations)
     }
 }
 class import_tree extends Tree{
@@ -200,11 +139,6 @@ export {
     annotation_tree,
     modifiers,
     block_tree,
-    if_tree,
-    while_tree,
-    for_tree,
-    switch_tree,
-    foreach_tree,
     var_tree,
     body,
     func_tree,
@@ -212,5 +146,6 @@ export {
     module_tree,
     import_tree,
     enum_tree,
-    interface_tree
+    interface_tree,
+    space_tree
 }

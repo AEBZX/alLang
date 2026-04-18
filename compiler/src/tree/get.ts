@@ -2,7 +2,7 @@ import {Tree} from 'allang-compiler-base'
 import {bool_oper_type, math_oper_type, pointer_type} from '../model'
 import {param_call_tree, param_identifier_tree} from './param'
 import {command_tree} from './command'
-import {lambda_type_tree, type_tree} from './identifier'
+import {identifier_tree, lambda_type_tree, type_tree} from './identifier'
 import {block_tree} from './block'
 //根树
 class get_tree extends Tree
@@ -69,8 +69,8 @@ class lambda_call_get_tree extends get_tree {
     }
 }
 class map_get_tree extends get_tree {
-    map: { [key: string]: get_tree }
-    constructor(map: { [key: string]: get_tree }) {
+    map: { key: identifier_tree, get:get_tree }[]
+    constructor(map: { key: identifier_tree, get:get_tree }[]) {
         super()
         this.map = map
     }
