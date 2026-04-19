@@ -58,7 +58,8 @@ class var_tree extends Tree {
     modifiers:modifiers
     annotations:annotation_tree[]
     value:get_tree
-    constructor(modifiers:modifiers, annotations:annotation_tree[], value:get_tree) {
+    name:string
+    constructor(name:string,modifiers:modifiers, annotations:annotation_tree[], value:get_tree) {
         super()
         this.modifiers = modifiers
         this.annotations = annotations

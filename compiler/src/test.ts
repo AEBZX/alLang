@@ -4,10 +4,6 @@ import allang_tools from './allang_tools'
 import {match} from './parser'
 import allang_log from './allang_log'
 let code=`
-import a as b;
-@ABC('ABC',123,ABC.ABC)
-@CDE.AS()
-@A
 `
 let a=new segment(code,tokens)
 let ls=a.segment()

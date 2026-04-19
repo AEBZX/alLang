@@ -1,47 +1,329 @@
 import {
-    annotation_tree, boolean_get_tree, call_get_tree, call_tree, class_tree,
-    func_tree, get_node_tree,
-    import_tree,
+    annotation_tree, array_get_tree, bool_oper_get_tree, boolean_get_tree, call_get_tree, call_tree, class_tree,
+    func_tree, get_node_tree, get_tree,
+    import_tree, instanceof_get_tree, lambda_call_get_tree, lambda_get_tree, map_get_tree, math_oper_get_tree,
     modifiers,
     module_tree, null_get_tree, number_get_tree,
-    param_call_tree, string_get_tree,
+    param_call_tree, pointer_get_tree, string_get_tree, ternary_get_tree, typeof_get_tree, var_tree,
     variable_get_tree
 } from './tree'
 import {token, token_type, Tree} from 'allang-compiler-base'
 import allang_tools from './allang_tools'
 import allang_log from './allang_log'
-//匹配数字,字符串,map,bool,null,new xxx等
+import {bool_oper_type, math_oper_type, pointer_type} from "./model";
 function match_get(tool:allang_tools,log:allang_log):get_node_tree {
+    return match_ternary(tool, log)
+}
+function match_get_basic(tool:allang_tools,log:allang_log):get_tree {
+    if(!tool.now()) return null
+
+    let basic: get_tree = null
+
+    tool.backup()
+    tool._match_type(token_type.number, () => {
+        basic = new number_get_tree(parseFloat(tool.now().name))
+    }, () => {
+        tool._match_type(token_type.string, () => {
+            basic = new string_get_tree(tool.now().name)
+        }, () => {
+            tool._match_word('true', () => {
+                basic = new boolean_get_tree(true)
+            }, () => {
+                tool._match_word('false', () => {
+                    basic = new boolean_get_tree(false)
+                }, () => {
+                    tool._match_word('null', () => {
+                        basic = new null_get_tree()
+                    }, () => {
+                        tool.restore()
+                        basic = null
+                    })
+                })
+            })
+        })
+    })
+
+    if(basic) {
+        tool.kill()
+        return basic
+    }
     return null
 }
-function match_get_basic() {
+function match_get_variable_or_new(tool:allang_tools,log:allang_log):get_tree {
+    if(!tool.now()) return null
 
-}
-//格式:new func(get,get,...)
-function match_get_call_new(tool:allang_tools,log:allang_log):call_get_tree{
+    let ret: get_tree = null
+
     tool.backup()
-    let ret=new call_get_tree(null,null)
-    if(!tool.now())return null
-    tool.match_word('new',()=>{
-        tool.restore()
-        ret=null
+
+    let is_new = false
+    tool._match_word('new', () => {
+        is_new = true
+    }, () => {})
+
+    if(is_new) {
+        let name = match_module_use(tool, log, true)
+        if(!name) {
+            log.error('new后缺少类名', tool.now()?.line || '')
+            tool.restore()
+            return null
+        }
+        let params = match_call_param(tool, log)
+        if(!params) {
+            log.error('new表达式缺少参数列表', tool.now()?.line || '')
+            tool.restore()
+            return null
+        }
+        ret = new call_get_tree(name, params)
+        tool.kill()
+        return ret
+    }
+
+    tool.restore()
+
+    tool.backup()
+    let name = match_module_use(tool, log, false)
+    if(name) {
+        ret = new variable_get_tree(name)
+        tool.kill()
+        return ret
+    }
+
+    tool.restore()
+    return null
+}
+function match_get_map(tool:allang_tools,log:allang_log):map_get_tree {
+    if(!tool.now() || tool.now().name !== '{') return null
+
+    // TODO: implement map literal parsing
+    return null
+}
+function match_get_lambda(tool:allang_tools,log:allang_log):lambda_get_tree {
+    if(!tool.now() || tool.now().name !== '(') return null
+
+    tool.backup()
+
+    let params_backup = tool.index
+    let is_lambda = false
+
+    tool.match_word('(', () => {
+        let param_count = 0
+        while(tool.now() && tool.now().name !== ')') {
+            if(tool.now().name === ',') {
+                tool.next()
+                continue
+            }
+            if(tool.now().type === token_type.identifier) {
+                param_count++
+                tool.next()
+            } else {
+                break
+            }
+        }
+
+        if(tool.now() && tool.now().name === ')') {
+            tool.next()
+            if(tool.now() && tool.now().name === '=>') {
+                is_lambda = true
+            }
+        }
     })
-    if(!ret)return null
-    ret=match_get_call_new(tool,log)
-    if(!ret)log.error('不合法的new',tool.now().line)
-    return ret
+
+    if(!is_lambda) {
+        tool.index = params_backup
+        tool.restore()
+        return null
+    }
+
+    tool.match_word('=>', () => {})
+
+    let body: any[] = []
+    if(tool.now() && tool.now().name === '{') {
+        // TODO: implement block parsing for lambda body
+        tool.match_word('{', () => {})
+        let brace_count = 1
+        while(tool.now() && brace_count > 0) {
+            if(tool.now().name === '{') brace_count++
+            else if(tool.now().name === '}') brace_count--
+            tool.next()
+        }
+    } else {
+        let expr = match_get(tool, log)
+        if(expr) body.push(expr)
+    }
+
+    tool.kill()
+    return new lambda_get_tree(null, body)
 }
-//格式:func(get,get,...)
-function match_get_call_func(tool:allang_tools,log:allang_log):call_get_tree{
+function match_get_chain_element(tool:allang_tools,log:allang_log):get_tree {
+    if(!tool.now()) return null
+
+    let element: get_tree = null
+
+    if(tool.now().name === '(') {
+        let params = match_call_param(tool, log)
+        if(params) {
+            return new lambda_call_get_tree(params)
+        }
+    }
+
+    if(tool.now().name === '[') {
+        tool.backup()
+        tool.match_word('[', () => {})
+        let index = match_get(tool, log)
+        if(!index) {
+            log.error('数组索引表达式错误', tool.now().line)
+        }
+        tool.match_word(']', () => {
+            log.error('数组索引缺少结束符', tool.now().line)
+        })
+        tool.kill()
+        return new array_get_tree(get_node_tree.create([index]))
+    }
+
+    if(tool.now().name === '.') {
+        tool.backup()
+        tool.match_word('.', () => {})
+        let name = tool.match_type(token_type.identifier, () => {
+            log.error('成员访问缺少标识符', tool.now().line)
+        })
+        tool.kill()
+        return new variable_get_tree(name.name)
+    }
+
+    element = match_get_basic(tool, log)
+    if(element) return element
+
+    element = match_get_map(tool, log)
+    if(element) return element
+
+    element = match_get_lambda(tool, log)
+    if(element) return element
+
+    element = match_get_variable_or_new(tool, log)
+    if(element) return element
+
+    return null
+}
+function match_get_chain(tool:allang_tools,log:allang_log):get_node_tree {
+    if(!tool.now()) return null
+
+    let first = match_get_chain_element(tool, log)
+    if(!first) return null
+
+    let chain: get_tree[] = [first]
+
+    while(tool.now()) {
+        let next = match_get_chain_element(tool, log)
+        if(!next) break
+        chain.push(next)
+    }
+
+    return get_node_tree.create(chain)
+}
+function match_get_unary(tool:allang_tools,log:allang_log):get_node_tree {
+    if(!tool.now()) return null
+
     tool.backup()
-    if(!tool.now())return null
-    let ret=new call_get_tree(null,null)
-    ret.name=match_module_use(tool,log,false)
-    ret.params=match_call_param(tool,log)
-    if(!ret.name||!ret.params)return null
-    return ret
+
+    let oper: pointer_type | null = null
+    if(tool.now().name === '*') {
+        oper = pointer_type.value
+        tool.next()
+    } else if(tool.now().name === '&') {
+        oper = pointer_type.address
+        tool.next()
+    }
+
+    if(oper !== null) {
+        let operand = match_get_unary(tool, log)
+        if(!operand) {
+            log.error('指针操作缺少操作数', tool.now().line)
+        }
+        tool.kill()
+        return get_node_tree.create([new pointer_get_tree(oper), operand])
+    }
+
+    tool.restore()
+
+    tool.backup()
+    if(tool.now() && tool.now().name === 'typeof') {
+        tool.next()
+        let operand = match_get_unary(tool, log)
+        if(!operand) {
+            log.error('typeof缺少操作数', tool.now().line)
+        }
+        tool.kill()
+        return get_node_tree.create([new typeof_get_tree(operand)])
+    }
+
+    tool.restore()
+
+    return match_get_chain(tool, log)
 }
-//(get,get,...)
+function match_get_multiplicative(tool:allang_tools,log:allang_log):get_node_tree {
+    let left = match_get_unary(tool, log)
+    if(!left) return null
+
+    while(tool.now()) {
+        let oper: math_oper_type | null = null
+        if(tool.now().name === '*') oper = math_oper_type.mul
+        else if(tool.now().name === '/') oper = math_oper_type.div
+        else if(tool.now().name === '%') oper = math_oper_type.mod
+        else break
+
+        tool.next()
+        let right = match_get_unary(tool, log)
+        if(!right) {
+            log.error('运算符缺少右操作数', tool.now().line)
+        }
+        left = get_node_tree.create([new math_oper_get_tree(oper, left, right)])
+    }
+
+    return left
+}
+function match_get_additive(tool:allang_tools,log:allang_log):get_node_tree {
+    let left = match_get_multiplicative(tool, log)
+    if(!left) return null
+
+    while(tool.now()) {
+        let oper: math_oper_type | null = null
+        if(tool.now().name === '+') oper = math_oper_type.add
+        else if(tool.now().name === '-') oper = math_oper_type.sub
+        else break
+
+        tool.next()
+        let right = match_get_multiplicative(tool, log)
+        if(!right) {
+            log.error('运算符缺少右操作数', tool.now().line)
+        }
+        left = get_node_tree.create([new math_oper_get_tree(oper, left, right)])
+    }
+
+    return left
+}
+function match_get_comparison(tool:allang_tools,log:allang_log):get_node_tree {
+    let left = match_get_additive(tool, log)
+    if(!left) return null
+
+    while(tool.now()) {
+        let oper: bool_oper_type | null = null
+        if(tool.now().name === '<=') oper = bool_oper_type.less_equal
+        else if(tool.now().name === '>=') oper = bool_oper_type.greater_equal
+        else if(tool.now().name === '<') oper = bool_oper_type.less
+        else if(tool.now().name === '>') oper = bool_oper_type.greater
+        else break
+
+        tool.next()
+        let right = match_get_additive(tool, log)
+        if(!right) {
+            log.error('比较运算符缺少右操作数', tool.now().line)
+        }
+        left = get_node_tree.create([new bool_oper_get_tree(oper, left, right)])
+    }
+
+    return left
+}
 function match_call_param(tool:allang_tools,log:allang_log):param_call_tree{
     let ret=new param_call_tree([])
     if(!tool.now())return null
@@ -58,36 +340,126 @@ function match_call_param(tool:allang_tools,log:allang_log):param_call_tree{
         while (true){
             //不是结束就是参数
             if(split){
-                tool.match_word(',',()=>{
+                tool._match_word(',',()=>{
                     log.error('重复分隔符',tool.now().line)
-                })
-                tool._match_word(')',()=>{
-                    bk=true
                 },()=>{
-                    ret.args.push(match_get(tool,log))
+                    tool._match_word(')',()=>{
+                        bk=true
+                    },()=>{
+                        ret.args.push(match_get(tool,log))
+                    })
+                    split=false
                 })
-                split=false
             }
             if(bk)break
             if(!split){
                 tool.match_word(',',()=>{
-                    log.error('缺少分隔符',tool.now().line)
+                    tool._match_word(')',()=>{
+                        bk=true
+                    },()=>{
+                        log.error('缺少分隔符',tool.now().line)
+                    })
                 })
+                split=true
             }
+            if(bk)break
         }
     })
     tool.kill()
     return ret
 }
+function match_get_equality(tool:allang_tools,log:allang_log):get_node_tree {
+    let left = match_get_comparison(tool, log)
+    if(!left) return null
+
+    while(tool.now()) {
+        let oper: bool_oper_type | null = null
+        if(tool.now().name === '==') oper = bool_oper_type.equal
+        else if(tool.now().name === '!=') oper = bool_oper_type.not_equal
+        else if(tool.now() && tool.now().name === 'instanceof') {
+            tool.next()
+            let right = match_get_comparison(tool, log)
+            if(!right) {
+                log.error('instanceof缺少右操作数', tool.now().line)
+            }
+            left = get_node_tree.create([new instanceof_get_tree(left, right)])
+            continue
+        }
+        else break
+
+        tool.next()
+        let right = match_get_comparison(tool, log)
+        if(!right) {
+            log.error('相等运算符缺少右操作数', tool.now().line)
+        }
+        left = get_node_tree.create([new bool_oper_get_tree(oper, left, right)])
+    }
+
+    return left
+}
+function match_get_logic_and(tool:allang_tools,log:allang_log):get_node_tree {
+    let left = match_get_equality(tool, log)
+    if(!left) return null
+
+    while(tool.now() && tool.now().name === '&&') {
+        tool.next()
+        let right = match_get_equality(tool, log)
+        if(!right) {
+            log.error('逻辑与缺少右操作数', tool.now().line)
+        }
+        left = get_node_tree.create([new bool_oper_get_tree(bool_oper_type.logic_and, left, right)])
+    }
+
+    return left
+}
+function match_get_logic_or(tool:allang_tools,log:allang_log):get_node_tree {
+    let left = match_get_logic_and(tool, log)
+    if(!left) return null
+
+    while(tool.now() && tool.now().name === '||') {
+        tool.next()
+        let right = match_get_logic_and(tool, log)
+        if(!right) {
+            log.error('逻辑或缺少右操作数', tool.now().line)
+        }
+        left = get_node_tree.create([new bool_oper_get_tree(bool_oper_type.logic_or, left, right)])
+    }
+
+    return left
+}
+function match_ternary(tool:allang_tools,log:allang_log):get_node_tree {
+    let condition = match_get_logic_or(tool, log)
+    if(!condition) return null
+
+    if(tool.now() && tool.now().name === '?') {
+        tool.next()
+        let true_value = match_get(tool, log)
+        if(!true_value) {
+            log.error('三元运算符真值分支缺失', tool.now().line)
+        }
+        tool.match_word(':', () => {
+            log.error('三元运算符缺少冒号', tool.now().line)
+        })
+        let false_value = match_get(tool, log)
+        if(!false_value) {
+            log.error('三元运算符假值分支缺失', tool.now().line)
+        }
+        return get_node_tree.create([new ternary_get_tree(condition, true_value, false_value)])
+    }
+
+    return condition
+}
 //匹配a.b.c.d形式嵌套模块
 function match_module_use(tool:allang_tools,log:allang_log,kill:boolean):string{
     let ret:string=''
     if(!tool.now())return null
-    ret+=tool.match_type(token_type.identifier,()=>{
+    tool.backup()
+    let ls=tool.match_type(token_type.identifier,()=>{
         if(kill)log.error('没模块名',tool.now().line)
         ret=null
-    }).name
-    if(!ret)return null
+    })
+    if(!ls)return null
+    ret+=ls.name
     let split=false
     let bk=false
     if(tool.now()&&tool.now().name=='.')
@@ -207,6 +579,22 @@ function match_modifiers(tool:allang_tools,log:allang_log):modifiers{
     tool.kill()
     return ret
 }
+//匹配声明块
+function match_var_block(tool:allang_tools,log:allang_log):var_tree {
+    if(!tool.now())return null
+    tool.backup()
+    let annotations=match_annotations(tool,log)
+    let mod=match_modifiers(tool,log)
+    let ret=new var_tree(null,mod,annotations,null)
+    ret.name=tool.match_type(token_type.identifier, () => {
+        log.error('非法的变量名', tool.now().line)
+    }).name
+    //声明
+    tool.match_word(':',()=>{
+        log.error('没用类型声明', tool.now().line)
+    })
+    return ret
+}
 /*
 格式:
 @${模块名.函数名}({直接量})
@@ -232,32 +620,6 @@ function match_annotation(tool:allang_tools,log:allang_log):annotation_tree {
     let param_call=new param_call_tree([])
     let split=true
     let bk=false
-    let param_match:()=>token=()=>{
-        let ret
-        tool._match_type(token_type.number,()=>{
-            ret=tool.now()
-        },()=>{
-            tool._match_type(token_type.string,()=>{
-                ret=tool.now()
-            },()=>{
-                tool._match_word('null',()=>{
-                    ret=new token('null',token_type.keyword,null)
-                },()=>{
-                    tool._match_word('true',()=>{
-                        ret=new token('true',token_type.keyword,null)
-                    }, ()=>{
-                        tool._match_word('false',()=>{
-                            ret=new token('false',token_type.keyword,null)
-                        }, ()=>{
-                            ret=new token(match_module_use(tool,log,false),token_type.identifier,null)
-                            if(!ret)log.error('没有匹配到参数',tool.now().line)
-                        })
-                    })
-                })
-            })
-        })
-        return ret
-    }
     tool.match_word(')',()=>{
         while (tool.now()){
             //必然是直接量
@@ -265,32 +627,7 @@ function match_annotation(tool:allang_tools,log:allang_log):annotation_tree {
                 tool._match_word(',',()=>{
                     log.error('重复分隔',tool.now().line)
                 },()=>{
-                    let a=param_match()
-                    //识别a是啥
-                    switch (a.type){
-                        case token_type.number:
-                            param_call.args.push(get_node_tree.create([new number_get_tree(parseFloat(a.name))]))
-                            break
-                        case token_type.string:
-                            param_call.args.push(get_node_tree.create([new string_get_tree(a.name)]))
-                            break
-                        case token_type.identifier:
-                            param_call.args.push(get_node_tree.create([new variable_get_tree(a.name)]))
-                            break
-                        case token_type.keyword:
-                            switch (a.name){
-                                case 'true':
-                                    param_call.args.push(get_node_tree.create([new boolean_get_tree(true)]))
-                                    break
-                                case 'false':
-                                    param_call.args.push(get_node_tree.create([new boolean_get_tree(false)]))
-                                    break
-                                case 'null':
-                                    param_call.args.push(get_node_tree.create([new null_get_tree()]))
-                                    break
-                            }
-                            break
-                    }
+                    param_call.args.push(match_get(tool,log))
                     split=false
                 })
             }
@@ -317,31 +654,6 @@ function match_annotations(tool:allang_tools,log:allang_log):annotation_tree[]{
         if(a)ret.push(a)
         else return ret
     }
-    tool.kill()
-    return ret
-}
-/*
-@注解
-@注解
-修饰符 名字:自定义
- */
-function match_header(tool:allang_tools,log:allang_log):
-    {modifiers:modifiers,annotations:annotation_tree[],name:string} {
-    let ret={
-        modifiers:new modifiers(false,false,false,false),
-        annotations:[],
-        name:''
-    }
-    tool.backup()
-    ret.annotations=match_annotations(tool,log)
-    ret.modifiers=match_modifiers(tool,log)
-    ret.name=tool.match_type(token_type.identifier,()=>{
-        tool.restore()
-        log.error('没有匹配到名称',tool.now().line)
-    }).name
-    tool.match_word(':',()=>{
-        log.error('缺少类型标识',tool.now().line)
-    })
     tool.kill()
     return ret
 }

@@ -177,6 +177,7 @@ function match_number(code:string[], start:number):{i:number,v:string,o:boolean}
                 if(point)break
                 point=true
             }
+            v+=code[i]
             i++
         }
         if(ls-1>=0&&code[ls-1]=='-'){

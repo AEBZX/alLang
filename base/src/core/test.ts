@@ -8,4 +8,4 @@ let a:word[]=[
     new word('if'),
     new word('else if')
 ]
-console.log(new segment("`123`",a).segment())
+console.log(new segment("12",a).segment())
