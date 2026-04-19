@@ -72,8 +72,8 @@ class lambda_call_get_tree extends get_tree {
     }
 }
 class map_get_tree extends get_tree {
-    map: { key: identifier_tree, get:get_tree }[]
-    constructor(map: { key: identifier_tree, get:get_tree }[]) {
+    map: { key: string, get:get_tree }[]
+    constructor(map: { key: string, get:get_tree }[]) {
         super()
         this.map = map
     }

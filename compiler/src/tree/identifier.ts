@@ -29,15 +29,13 @@ class basic_type_tree extends type_tree {
     }
 }
 class map_type_tree extends type_tree {
-    key: string
-    value: type_tree
-    constructor(key: string, value: type_tree) {
+    value: identifier_tree[]
+    constructor(value:identifier_tree[]) {
         super()
-        this.key = key
         this.value = value
     }
 }
-class array_type_tree extends type_tree {
+class array_type_tree extends type_tree{
     type_name: type_tree
     constructor(type: type_tree) {
         super()

@@ -103,12 +103,10 @@ class space_tree extends Tree{
     }
 }
 class class_tree extends space_tree{
-    extends: string
-    implements: string[]
-    constructor(name:string, _extends: string, _implements: string[],
+    implements: string
+    constructor(name:string, _extends: string, _implements: string,
                 modifiers:modifiers, annotations:annotation_tree[]) {
         super(name,modifiers,annotations)
-        this.extends = _extends
         this.implements = _implements
     }
 }

@@ -108,7 +108,8 @@ export default [
     ,_token('public')
     ,_token('private')
     ,_token('final')
+    ,_token('implements')
     //其他
-    ,_token('->')
+    ,_token('=>')
     ,_token('...')
 ]

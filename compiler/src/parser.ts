@@ -1,16 +1,19 @@
 import {
-    annotation_tree, array_get_tree, bool_oper_get_tree, boolean_get_tree, call_get_tree, call_tree, class_tree,
-    func_tree, get_node_tree, get_tree,
-    import_tree, instanceof_get_tree, lambda_call_get_tree, lambda_get_tree, map_get_tree, math_oper_get_tree,
+    annotation_tree, array_get_tree, array_type_tree,
+    basic_type_tree, bool_oper_get_tree, boolean_get_tree, call_get_tree, call_tree, class_tree,
+    func_tree, get_node_tree, get_tree, identifier_tree,
+    import_tree, instanceof_get_tree, lambda_call_get_tree, lambda_get_tree,
+    lambda_type_tree, map_get_tree, math_oper_get_tree,
     modifiers,
     module_tree, null_get_tree, number_get_tree,
-    param_call_tree, pointer_get_tree, string_get_tree, ternary_get_tree, typeof_get_tree, var_tree,
+    param_call_tree, pointer_get_tree, string_get_tree, ternary_get_tree, type_tree, typeof_get_tree, var_tree,
     variable_get_tree
 } from './tree'
 import {token, token_type, Tree} from 'allang-compiler-base'
 import allang_tools from './allang_tools'
 import allang_log from './allang_log'
-import {bool_oper_type, math_oper_type, pointer_type} from "./model";
+import {basic_type, bool_oper_type, math_oper_type, pointer_type} from "./model";
+import {map_type_tree} from "./tree/identifier";
 function match_get(tool:allang_tools,log:allang_log):get_node_tree {
     return match_ternary(tool, log)
 }
@@ -93,11 +96,61 @@ function match_get_variable_or_new(tool:allang_tools,log:allang_log):get_tree {
     return null
 }
 function match_get_map(tool:allang_tools,log:allang_log):map_get_tree {
-    if(!tool.now() || tool.now().name !== '{') return null
+    if(!tool.now()) return null
+    tool.backup()
+    let ret:map_get_tree = null
+    tool._match_word('{', () => {
+        tool.next()
+        ret = new map_get_tree([])
+        let split = true, bk = false
+        while(true) {
+            if(split) {
+                tool._match_word(',', () => {
+                    log.error('重复分隔符', tool.now().line)
+                }, () => {
+                    tool._match_word('}', () => {
+                        bk = true
+                    }, () => {
+                        let key_token = tool.match_type(token_type.identifier, () => {
+                            log.error('map键必须是标识符', tool.now().line)
+                        })
+                        if(!key_token) {
+                            bk = true
+                            return
+                        }
+                        tool.match_word(':', () => {
+                            log.error('map缺少冒号', tool.now().line)
+                        })
+                        let value = match_get(tool, log)
+                        if(!value) {
+                            log.error('map值缺失', tool.now().line)
+                        }
+                        ret.map.push({ key: key_token.name, get: value })
+                        split = false
+                    })
+                })
+            } else {
+                tool._match_word('}', () => {
+                    bk = true
+                }, () => {
+                    tool.match_word(',', () => {
+                        log.error('缺少分隔符', tool.now().line)
+                    })
+                    split = true
+                })
+            }
+            if(bk) break
+        }
+    }, () => {})
 
-    // TODO: implement map literal parsing
+    if(ret) {
+        tool.kill()
+        return ret
+    }
+    tool.restore()
     return null
 }
+
 function match_get_lambda(tool:allang_tools,log:allang_log):lambda_get_tree {
     if(!tool.now() || tool.now().name !== '(') return null
 
@@ -593,6 +646,146 @@ function match_var_block(tool:allang_tools,log:allang_log):var_tree {
     tool.match_word(':',()=>{
         log.error('没用类型声明', tool.now().line)
     })
+    return ret
+}
+//匹配类型声明
+function match_type(tool:allang_tools,log:allang_log):type_tree {
+    if(!tool.now())return null
+    tool.backup()
+    let ret: type_tree=match_array_type(tool,log)
+    tool.kill()
+    return ret
+}
+function match_basic_type(tool:allang_tools,log:allang_log):basic_type_tree{
+    let ret:basic_type_tree=null
+    if(!tool.now())return null
+    tool._match_word('number',()=>{
+        ret=new basic_type_tree(basic_type.number)
+    },()=>{
+        tool._match_word('string',()=>{
+            ret=new basic_type_tree(basic_type.string)
+        },()=>{
+            tool._match_word('boolean',()=>{
+                ret=new basic_type_tree(basic_type.boolean)
+            },()=>{
+                tool._match_word('void',()=>{
+                    ret=new basic_type_tree(basic_type.void)
+                },()=>{})
+            })
+        })
+    })
+    return ret
+}
+function match_map_type(tool:allang_tools,log:allang_log):map_type_tree{
+    if(!tool.now())return null
+    tool.backup()
+    let ret:map_type_tree=null
+    if(!tool.now())return null
+    //{a:b,c:d}形式
+    //先吃掉{
+    tool._match_word('{',()=>{
+        ret=new map_type_tree([])
+        let split=true,bk=false
+        tool.next()
+        while(true){
+            if(split){
+                tool._match_word(',',()=>{log.error('重复分隔符',tool.now().line)},()=>{
+                    let key=tool.match_type(token_type.identifier,
+                        () => {log.error('map不合法',tool.now().line)}).name
+                    tool.match_word(':',()=>{
+                        log.error('map不合法',tool.now().line)
+                    })
+                    let value=match_type(tool,log)
+                    if(!value)log.error('缺少类型声明',tool.now().line)
+                    ret.value.push(new identifier_tree(key,value))
+                    split=false
+                })
+            }else {
+                tool._match_word('}',()=>{
+                    bk=true
+                    tool.next()
+                },()=>{
+                    tool.match_word(',',()=>{log.error('缺少分隔符',tool.now().line)})
+                    split=true
+                })
+            }
+            if(bk)break
+        }
+    },()=>{})
+    tool.kill()
+    return ret
+}
+//(a:返回类型,b:返回类型)=>返回类型
+function match_lambda_type(tool:allang_tools,log:allang_log):lambda_type_tree{
+    if(!tool.now())return null
+    tool.backup()
+    let ret:lambda_type_tree=null
+    tool._match_word('(',()=>{
+        tool.next()
+        ret=new lambda_type_tree([],null)
+        //匹配参数
+        tool.match_word(')',()=>{
+            let bk= false,split=true
+            while(true){
+                if(split){
+                    tool._match_word(',',()=>{
+                        log.error('重复分隔符',tool.now().line)
+                    },()=>{
+                        //匹配参数
+                        let name=tool.match_type(token_type.identifier,
+                            () => {log.error('参数名不合法',tool.now().line)}).name
+                        tool.match_word(':',()=>{
+                            log.error('参数声明错误',tool.now().line)
+                        })
+                        let type=match_type(tool,log)
+                        if(!type)log.error('缺少类型声明',tool.now().line)
+                        ret.param.push(new identifier_tree(name,type))
+                        split=false
+                    })
+                }else{
+                    tool._match_word(')',()=>{
+                        bk=true
+                    },()=>{
+                        tool.match_word(',',()=>{log.error('缺少分隔符',tool.now().line)})
+                        split=true
+                    })
+                }
+                if(bk)break
+            }
+        })
+        tool.match_word('=>',()=>{log.error('缺少返回类型',tool.now().line)})
+        ret.return_type=match_type(tool,log)
+        if(!ret.return_type)log.error('缺少返回类型',tool.now().line)
+    },()=>{})
+    tool.kill()
+    return ret
+}
+function match_array_type(tool:allang_tools,log:allang_log):type_tree{
+    if(!tool.now())return null
+    tool.backup()
+    let ret:array_type_tree=null
+    //先匹配非数组类型
+    let type:type_tree=match_basic_type(tool,log)
+    if(!type)type=match_map_type(tool,log)
+    if(!type)type=match_lambda_type(tool,log)
+    ret=new array_type_tree(type)
+    //数组维度
+    let num:number=0
+    //循环匹配[]
+    let bk=false
+    while(true){
+        tool.match_word('[',()=>{bk=true})
+        if(bk)break
+        tool.match_word(']',()=>{log.error('没有结束的数组标记',tool.now().line)})
+        num++
+    }
+    for(let i=0;i<num;i++){
+        ret=new array_type_tree(ret)
+    }
+    if(num==0){
+        return type
+    }
+    tool.kill()
     return ret
 }
 /*
