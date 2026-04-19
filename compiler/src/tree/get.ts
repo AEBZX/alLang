@@ -20,6 +20,9 @@ class get_node_tree extends get_tree {
         super()
         this.tree = tree
     }
+    static create(tree:get_tree[]){
+        return new get_node_tree(new chain_get_tree(tree))
+    }
 }
 
 /*

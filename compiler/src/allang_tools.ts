@@ -11,8 +11,8 @@ export default class allang_tools implements tools {
     }
     _match_word(name:string,ok:()=>void,fail:()=>void){
         if(this.tokens[this.index]&&this.tokens[this.index].name==name){
-            this.next()
             ok()
+            this.next()
         }else fail()
     }
     _matches_word(name:string[],ok:(t:token)=>void,fail:()=>void){
@@ -22,8 +22,8 @@ export default class allang_tools implements tools {
     }
     _match_type(type:token_type,ok:()=>void,fail:()=>void){
         if(this.tokens[this.index]&&this.tokens[this.index].type== type){
-            this.next()
             ok()
+            this.next()
         }else fail()
     }
     add(tree: Tree): void {

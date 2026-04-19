@@ -107,6 +107,7 @@ export default [
     ,_token('static')
     ,_token('public')
     ,_token('private')
+    ,_token('final')
     //其他
     ,_token('->')
     ,_token('...')

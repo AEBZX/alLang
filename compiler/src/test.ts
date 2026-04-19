@@ -5,8 +5,9 @@ import {match} from './parser'
 import allang_log from './allang_log'
 let code=`
 import a as b;
-import b as a;
-import c.c.c.c.c.c as d;
+@ABC('ABC',123,ABC.ABC)
+@CDE.AS()
+@A
 `
 let a=new segment(code,tokens)
 let ls=a.segment()

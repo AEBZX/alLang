@@ -124,11 +124,9 @@ class continue_tree extends command_tree {
 }
 class call_tree extends command_tree{
     value: call_get_tree
-    name: string
     _await:boolean
-    constructor(name: string, value: call_get_tree,_await:boolean) {
+    constructor(value: call_get_tree,_await:boolean) {
         super(null)
-        this.name = name
         this.value = value
         this._await = _await
     }
@@ -136,7 +134,7 @@ class call_tree extends command_tree{
 //super(123456)
 class super_tree extends call_tree {
     constructor(value: call_get_tree) {
-        super('super',value,false)
+        super(value,false)
     }
 }
 export {super_tree,call_tree,break_tree,return_tree

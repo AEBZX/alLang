@@ -19,10 +19,12 @@ class modifiers{
     static:boolean
     async:boolean
     private:boolean
-    constructor(_static:boolean, _async:boolean, _private:boolean) {
+    final:boolean
+    constructor(_static:boolean, _async:boolean, _private:boolean, _final:boolean) {
         this.static = _static
         this.async = _async
         this.private = _private
+        this.final = _final
     }
 }
 //单纯的block
