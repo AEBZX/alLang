@@ -868,13 +868,6 @@ function match_param_identifier(tool: allang_tools, log: allang_log): param_iden
     })
     return ret
 }
-
-/*
-块头格式:
-注解
-修饰符 名字:叽里咕噜
- */
-
 /*
 函数:类型(){巴拉巴拉}
 模块:{}
@@ -1058,15 +1051,23 @@ function match_interface_body(tool: allang_tools, log: allang_log): interface_tr
         log.error('缺少左括号', tool.now().line)
     })
     tool.match_word('}', () => {
+        let bk=false
         //循环匹配函数声明
         while (true) {
             let annotation: annotation_tree[] = match_annotations(tool, log)
             let mod: modifiers = match_modifiers(tool, log)
-            let func: func_tree = match_func_body(tool, log)
-            if (!func) break
+            let func: func_tree =
+                new func_tree('', null, null, null, null, null)
+            func.name = tool.match_type(token_type.identifier,
+                () => {bk=true})?.name
+            if(bk)break
+            tool.match_word(':', () => {log.error('缺少冒号', tool.now().line)})
+            func.return_type=match_type(tool, log)
+            func.params = match_param_identifier(tool, log)
             func.modifiers = mod
             func.annotations = annotation
             ret.func.push(func)
+            tool.match_word(';',()=>{log.error('缺少分号', tool.now().line)})
         }
         tool.match_word('}', () => {
             log.error('缺少右括号', tool.now().line)
@@ -1090,18 +1091,27 @@ function match_enum_body(tool: allang_tools, log: allang_log): enum_tree {
         log.error('缺少左括号', tool.now().line)
     })
     tool.match_word('}', () => {
-        let bk = false
+        let bk = false,split=true
         while (true) {
-            let name = tool.match_type(token_type.identifier,
-                () => {
-                    bk = true
-                })?.name
+            if (!split) {
+                tool._match_word('}', () => {
+                    bk=true
+                },()=>{
+                    tool.match_word(',', () => {
+                        log.error('缺少逗号', tool.now().line)
+                    })
+                    split=true
+                })
+            }else {
+                let name = tool.match_type(token_type.identifier,
+                    () => {
+                        bk = true
+                    })?.name
+                ret.values.push(name)
+                split=false
+            }
             if (bk) break
-            ret.values.push(name)
         }
-        tool.match_word('}', () => {
-            log.error('缺少右括号', tool.now().line)
-        })
     })
     tool.kill()
     return ret
