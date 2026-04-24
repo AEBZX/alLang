@@ -59,7 +59,6 @@ class segment{
                 if(!this.match(this.words[i]))continue
                 let a=match(this.code,this.index,match_type.identifier)
                 if(a.o&&a.v!=this.words[i].name){
-                    console.log(a)
                     this.index=a.i
                     this.ret.push(new token(a.v,token_type.identifier,this.lines()))
                     break

@@ -1,4 +1,5 @@
-import {annotation_tree,
+import {
+    annotation_tree,
     modifiers,
     block_tree,
     var_tree,
@@ -8,14 +9,18 @@ import {annotation_tree,
     module_tree,
     import_tree,
     enum_tree,
-    interface_tree} from './block'
-import {super_tree,call_tree,break_tree,return_tree
-    ,math_set_tree,delete_tree,set_tree,identifier_var_tree,command_tree,throw_tree,continue_tree,if_tree,
+    interface_tree
+} from './block'
+import {
+    super_tree, call_tree, break_tree, return_tree
+    , math_set_tree, delete_tree, set_tree, identifier_var_tree, command_tree, throw_tree, continue_tree, if_tree,
     while_tree,
     for_tree,
     switch_tree,
-    foreach_tree,} from './command'
-import {chain_get_tree,
+    foreach_tree,
+} from './command'
+import {
+    chain_get_tree,
     variable_get_tree,
     null_get_tree,
     number_get_tree,
@@ -34,20 +39,29 @@ import {chain_get_tree,
     typeof_get_tree,
     lambda_get_tree,
     lambda_call_get_tree,
-    ternary_get_tree} from './get'
-import {identifier_tree,
+    ternary_get_tree
+} from './get'
+import {
+    identifier_tree,
     type_tree,
     basic_type_tree,
     array_type_tree,
-    lambda_type_tree} from './identifier'
-import {param_call_tree,
-    param_identifier_tree} from './param'
-export {param_call_tree,
-    param_identifier_tree,identifier_tree,
+    lambda_type_tree
+} from './identifier'
+import {
+    param_call_tree,
+    param_identifier_tree
+} from './param'
+
+export {
+    param_call_tree,
+    param_identifier_tree,
+    identifier_tree,
     type_tree,
     basic_type_tree,
     array_type_tree,
-    lambda_type_tree,chain_get_tree,
+    lambda_type_tree,
+    chain_get_tree,
     variable_get_tree,
     null_get_tree,
     number_get_tree,
@@ -66,8 +80,20 @@ export {param_call_tree,
     typeof_get_tree,
     lambda_get_tree,
     lambda_call_get_tree,
-    ternary_get_tree,super_tree,call_tree,break_tree,return_tree
-    ,math_set_tree,delete_tree,set_tree,identifier_var_tree,command_tree,throw_tree,continue_tree,annotation_tree,
+    ternary_get_tree,
+    super_tree,
+    call_tree,
+    break_tree,
+    return_tree
+    ,
+    math_set_tree,
+    delete_tree,
+    set_tree,
+    identifier_var_tree,
+    command_tree,
+    throw_tree,
+    continue_tree,
+    annotation_tree,
     modifiers,
     block_tree,
     var_tree,
@@ -77,8 +103,10 @@ export {param_call_tree,
     module_tree,
     import_tree,
     enum_tree,
-    interface_tree,if_tree,
+    interface_tree,
+    if_tree,
     while_tree,
     for_tree,
     switch_tree,
-    foreach_tree,}
+    foreach_tree,
+}
