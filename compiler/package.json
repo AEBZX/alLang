@@ -1,0 +1,19 @@
+{
+  "name": "allang-compiler-core",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "allang-compiler-base": "^0.0.15"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.2"
+  }
+}

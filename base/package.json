@@ -1,0 +1,15 @@
+{
+  "name": "allang-compiler-base",
+  "version": "0.0.16",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "upload": "npm publish",
+    "local_test": "tsc&&node.exe --import file:/D:/Program%20Files/JetBrains/WebStorm%202025.1.4.1/plugins/nodeJS/js/ts-file-loader/node_modules/tsx/dist/loader.cjs E:\\alLang\\base\\src\\core\\test.ts"
+  },
+  "type": "module",
+  "keywords": [],
+  "author": "",
+  "license": "MIT"
+}
