@@ -78,9 +78,8 @@ class foreach_tree extends command_tree {
 }
 
 class throw_tree extends command_tree {
-    value: get_node_tree[]
-
-    constructor(value: get_node_tree[]) {
+    value: get_node_tree
+    constructor(value: get_node_tree) {
         super(null)
         this.value = value
     }
@@ -163,12 +162,20 @@ class super_tree extends call_tree {
         super(value, false)
     }
 }
-
+class vm_tree extends command_tree{
+    value: string
+    variable:boolean
+    constructor(value: string, variable:boolean) {
+        super(null)
+        this.value = value
+        this.variable = variable
+    }
+}
 export {
     super_tree, call_tree, break_tree, return_tree
     , math_set_tree, delete_tree, set_tree, identifier_var_tree, command_tree, throw_tree, continue_tree, if_tree,
     while_tree,
     for_tree,
     switch_tree,
-    foreach_tree,
+    foreach_tree,vm_tree
 }

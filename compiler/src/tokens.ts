@@ -112,4 +112,6 @@ export default [
     //其他
     , _token('=>')
     , _token('...')
+    //虚拟机直接操作
+    ,_token('vm')
 ]

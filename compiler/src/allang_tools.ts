@@ -20,7 +20,7 @@ export default class allang_tools implements tools {
 
     _matches_word(name: string[], ok: (t: token) => void, fail: () => void) {
         if (this.tokens[this.index] && name.includes(this.tokens[this.index].name)) {
-            ok(this.next())
+            ok(this.getAndNext())
         } else fail()
     }
 
@@ -42,7 +42,11 @@ export default class allang_tools implements tools {
     get(): Tree[] {
         throw new Error("Method not implemented.")
     }
-
+    getAndNext():token{
+        let ret=this.now()
+        this.next()
+        return ret
+    }
     match_word(name: string, un: () => void): void {
         //如果是就吃掉,不是就执行un
         if (this.tokens[this.index] && this.tokens[this.index].name == name) {
