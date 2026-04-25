@@ -7,9 +7,11 @@ function _token(keyword: string): word {
 export default [
     //语法块
     _token('if')
-    , _token('else if')
+    , _token('elif')
     , _token('else')
     , _token('for')
+    , _token('foreach')
+    , _token('foreach')
     , _token('while')
     , _token('do')
     , _token('switch')

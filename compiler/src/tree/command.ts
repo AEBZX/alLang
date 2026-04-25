@@ -10,6 +10,7 @@ import {
 } from './get'
 import {identifier_tree, type_tree} from './identifier'
 import {block_tree} from './block'
+import {param_call_tree} from "./param";
 //基本指令
 //call操作,return,continue,break,a=b,super,delete,运算,声明变量,throw get_node
 class command_tree extends block_tree {
@@ -17,12 +18,12 @@ class command_tree extends block_tree {
 
 //if,while,do-while,for,switch,foreach等
 class if_tree extends command_tree {
-    condition: bool_oper_get_tree
+    condition: get_node_tree
     else_if: if_tree[]
-    else: block_tree
+    else: command_tree[]
 
-    constructor(condition: bool_oper_get_tree, block: block_tree, else_if: if_tree[], _else: block_tree) {
-        super([block])
+    constructor(condition: get_node_tree, block: block_tree, else_if: if_tree[], _else:command_tree[]) {
+        super(null)
         this.condition = condition
         this.else_if = else_if
         this.else = _else
@@ -30,24 +31,26 @@ class if_tree extends command_tree {
 }
 
 class while_tree extends command_tree {
-    condition: bool_oper_get_tree
+    condition: get_node_tree
     do: boolean
-
-    constructor(condition: bool_oper_get_tree, block: block_tree, _do: boolean) {
-        super([block])
+    body:command_tree[]
+    constructor(condition: get_node_tree, block: command_tree[], _do: boolean) {
+        super([])
+        this.body=block
         this.condition = condition
         this.do = _do
     }
 }
 
 class for_tree extends command_tree {
-    init: identifier_var_tree[]
-    condition: bool_oper_get_tree
+    init: command_tree[]
+    condition: get_node_tree
     step: command_tree[]
-
-    constructor(init: identifier_var_tree[], condition: bool_oper_get_tree, block: block_tree, step: command_tree[]) {
-        super([block])
+    body:command_tree[]
+    constructor(init: command_tree[], condition: get_node_tree, block: command_tree[], step: command_tree[]) {
+        super(null)
         this.init = init
+        this.body=block
         this.condition = condition
         this.step = step
     }
@@ -55,10 +58,10 @@ class for_tree extends command_tree {
 
 class switch_tree extends command_tree {
     condition: get_node_tree
-    cases: { value: get_tree, call: block_tree }[]
-    default: block_tree
+    cases: { value: get_tree, call: command_tree[] }[]
+    default: command_tree[]
 
-    constructor(condition: get_node_tree, cases: { value: get_tree, call: block_tree }[], default_block: block_tree) {
+    constructor(condition: get_node_tree, cases: { value: get_tree, call: command_tree[] }[], default_block: command_tree[]) {
         super(null)
         this.condition = condition
         this.cases = cases
@@ -69,9 +72,8 @@ class switch_tree extends command_tree {
 class foreach_tree extends command_tree {
     identifier: identifier_var_tree
     array: get_node_tree
-
-    constructor(identifier: identifier_var_tree, array: get_node_tree, block: block_tree) {
-        super([block])
+    constructor(identifier: identifier_var_tree, array: get_node_tree, block: command_tree[]) {
+        super(block)
         this.identifier = identifier
         this.array = array
     }
@@ -146,12 +148,14 @@ class continue_tree extends command_tree {
 }
 
 class call_tree extends command_tree {
-    value: call_get_tree
+    param:param_call_tree
+    name:string
     _await: boolean
 
-    constructor(value: call_get_tree, _await: boolean) {
+    constructor(name:string, param:param_call_tree, _await: boolean) {
         super(null)
-        this.value = value
+        this.name = name
+        this.param = param
         this._await = _await
     }
 }
@@ -159,7 +163,7 @@ class call_tree extends command_tree {
 //super(123456)
 class super_tree extends call_tree {
     constructor(value: call_get_tree) {
-        super(value, false)
+        super(null,null, false)
     }
 }
 class vm_tree extends command_tree{

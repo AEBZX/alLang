@@ -59,21 +59,22 @@ class ternary_get_tree extends get_tree {
 }
 
 class lambda_get_tree extends get_tree {
-    identifier: lambda_type_tree
-    body: block_tree[]
+    param: param_identifier_tree
+    body: command_tree[]
 
-    constructor(identifier: lambda_type_tree, body: block_tree[]) {
+    constructor(identifier: param_identifier_tree, body: command_tree[]) {
         super()
-        this.identifier = identifier
+        this.param = identifier
         this.body = body
     }
 }
 
 class lambda_call_get_tree extends get_tree {
     params: param_call_tree
-
-    constructor(params: param_call_tree) {
+    name:string
+    constructor(name:string,params: param_call_tree) {
         super()
+        this.name = name
         this.params = params
     }
 }

@@ -53,9 +53,9 @@ class block_tree extends Tree {
  */
 class try_tree extends block_tree {
     catch: lambda_get_tree
-    finally: block_tree
+    finally: command_tree[]
 
-    constructor(block: block_tree, catch_block: lambda_get_tree, finally_block: block_tree) {
+    constructor(block: block_tree, catch_block: lambda_get_tree, finally_block: command_tree[]) {
         super([block])
         this.catch = catch_block
         this.finally = finally_block
@@ -96,9 +96,9 @@ class space_tree extends Tree {
 class func_tree extends space_tree {
     params: param_identifier_tree
     return_type: type_tree
-    commands: block_tree
+    commands: command_tree[]
 
-    constructor(name: string, commands: block_tree, modifiers: modifiers, annotations: annotation_tree[],
+    constructor(name: string, commands: command_tree[], modifiers: modifiers, annotations: annotation_tree[],
                 params: param_identifier_tree, return_type: type_tree) {
         super(name, modifiers, annotations)
         this.params = params
@@ -175,5 +175,5 @@ export {
     import_tree,
     enum_tree,
     interface_tree,
-    space_tree
+    space_tree,try_tree
 }

@@ -5,9 +5,8 @@ import {match} from './parser'
 import allang_log from './allang_log'
 
 let code = `
-{
-a++;
-continue;
+public a:module{
+    public static main:void(){}
 }
 `
 let a = new segment(code, tokens)

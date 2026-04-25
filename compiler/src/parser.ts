@@ -2,23 +2,23 @@ import {
     annotation_tree, array_get_tree, array_type_tree,
     basic_type_tree, body, bool_oper_get_tree, boolean_get_tree, break_tree, call_get_tree, call_tree, class_tree,
     command_tree,
-    continue_tree, enum_tree,
-    func_tree, get_node_tree, get_tree, identifier_tree, identifier_var_tree,
+    continue_tree, delete_tree, enum_tree, for_tree, foreach_tree,
+    func_tree, get_node_tree, get_tree, identifier_tree, identifier_var_tree, if_tree,
     import_tree, instanceof_get_tree, interface_tree, lambda_call_get_tree, lambda_get_tree,
     lambda_type_tree, map_get_tree, math_oper_get_tree,
     modifiers,
     module_tree, null_get_tree, number_get_tree,
     param_call_tree,
     param_identifier_tree, pointer_get_tree, return_tree,
-    set_tree, string_get_tree, ternary_get_tree, throw_tree, type_tree, typeof_get_tree, var_tree,
-    variable_get_tree
+    set_tree, string_get_tree, switch_tree, ternary_get_tree, throw_tree, type_tree, typeof_get_tree, var_tree,
+    variable_get_tree, while_tree
 } from './tree'
 import {token, token_type, Tree} from 'allang-compiler-base'
 import allang_tools from './allang_tools'
 import allang_log from './allang_log'
 import {basic_type, bool_oper_type, math_oper_type, pointer_type} from "./model";
 import {map_type_tree} from "./tree/identifier";
-import {space_tree} from "./tree/block";
+import {space_tree, try_tree} from "./tree/block";
 import {vm_tree} from "./tree/command";
 
 function match_get(tool: allang_tools, log: allang_log): get_node_tree {
@@ -164,71 +164,17 @@ function match_get_lambda(tool: allang_tools, log: allang_log): lambda_get_tree 
     if (!tool.now() || tool.now().name !== '(') return null
 
     tool.backup()
-
-    let params_backup = tool.index
-    let is_lambda = false
-
-    tool.match_word('(', () => {
-        let param_count = 0
-        while (tool.now() && tool.now().name !== ')') {
-            if (tool.now().name === ',') {
-                tool.next()
-                continue
-            }
-            if (tool.now().type === token_type.identifier) {
-                param_count++
-                tool.next()
-            } else {
-                break
-            }
-        }
-
-        if (tool.now() && tool.now().name === ')') {
-            tool.next()
-            if (tool.now() && tool.now().name === '=>') {
-                is_lambda = true
-            }
-        }
-    })
-
-    if (!is_lambda) {
-        tool.index = params_backup
-        tool.restore()
-        return null
-    }
-
+    let param=match_param_identifier(tool, log)
     tool.match_word('=>', () => {
     })
-
-    let body: any[] = []
-    if (tool.now() && tool.now().name === '{') {
-        // TODO: implement block parsing for lambda body
-        tool.match_word('{', () => {
-        })
-        let brace_count = 1
-        while (tool.now() && brace_count > 0) {
-            if (tool.now().name === '{') brace_count++
-            else if (tool.now().name === '}') brace_count--
-            tool.next()
-        }
-    } else {
-        let expr = match_get(tool, log)
-        if (expr) body.push(expr)
-    }
-
+    let body=match_commands(tool, log)
     tool.kill()
-    return new lambda_get_tree(null, body)
+    return new lambda_get_tree(param, body)
 }
 
 function match_get_chain_element(tool: allang_tools, log: allang_log): get_tree {
     if (!tool.now()) return null
     let element: get_tree = null
-    if (tool.now().name === '(') {
-        let params = match_call_param(tool, log)
-        if (params) {
-            return new lambda_call_get_tree(params)
-        }
-    }
     tool.backup()
     let name: string, next: boolean = true
     //尝试吃掉一个名字
@@ -238,6 +184,12 @@ function match_get_chain_element(tool: allang_tools, log: allang_log): get_tree 
         next = false
     })?.name
     if (next) {
+        if (tool.now().name === '(') {
+            let params = match_call_param(tool, log)
+            if (params) {
+                return new call_get_tree(name,params)
+            }
+        }
         if (tool.now().name === '[') {
             tool.backup()
             tool.match_word('[', () => {
@@ -620,7 +572,6 @@ function match_modifiers(tool: allang_tools, log: allang_log): modifiers {
     let bk = false
     while (true) {
         tool._matches_word(_modifiers, (t: token) => {
-            console.log(t)
             modifier.push(t)
         }, () => bk = true)
         if (bk) break
@@ -834,14 +785,15 @@ function match_block_body(tool: allang_tools, log: allang_log): space_tree {
     if(!tool.now())return null
     let a = match_annotations(tool, log)
     let b = match_modifiers(tool, log)
+    let ret: Tree=new Tree()
     let n = tool.match_type(token_type.identifier,
         () => {
-            log.error('缺少名字', tool.now().line)
+        ret=null
         })?.name
+    if(!ret)return null
     tool.match_word(':', () => {
         log.error('缺少冒号', tool.now().line)
     })
-    let ret: Tree
     //函数
     ret = match_func_body(tool, log)
     if (ret && ret instanceof func_tree) {
@@ -913,7 +865,7 @@ function match_func_body(tool: allang_tools, log: allang_log): func_tree {
         return null
     }
     ret.return_type = type
-    //TODO实现函数体
+    ret.commands=match_commands(tool, log)
     tool.kill()
     return ret
 }
@@ -930,11 +882,10 @@ function match_module_body(tool: allang_tools, log: allang_log): module_tree {
     tool.match_word('{', () => {
         log.error('缺少开始标记', tool.now().line)
     })
+    ret.children=match_block_bodies(tool, log)
     tool.match_word('}', () => {
         ret.children = match_block_bodies(tool, log) as space_tree[]
-        tool.match_word(';', () => {
-            log.error('缺少分号', tool.now().line)
-        })
+        tool.match_word('}', ()=>{log.error('缺少结束标记', tool.now().line)})
     })
     tool.kill()
     return ret
@@ -983,6 +934,7 @@ function match_class_body(tool: allang_tools, log: allang_log): class_tree {
     tool.match_word('{', () => {
         log.error('缺少左括号', tool.now()?.line)
     })
+    ret.children=match_block_bodies(tool, log)
     tool.match_word('}', () => {
         ret.children = match_block_bodies(tool, log)
         tool.match_word('}', () => {
@@ -1205,6 +1157,20 @@ function match_var_init(tool: allang_tools, log: allang_log):identifier_var_tree
     tool.kill()
     return ret
 }
+//delete
+function match_delete(tool: allang_tools, log: allang_log): delete_tree {
+    if (!tool.now()) return null
+    tool.backup()
+    let ret=new delete_tree('')
+    tool.match_word('delete', () => {ret=null})
+    if(!ret)return null
+    ret.name = tool.match_type(token_type.identifier, () => {
+        log.error('缺少变量名', tool.now().line)
+    })?.name
+    tool.match_word(';',()=>{log.error('缺少分号', tool.now().line)})
+    tool.kill()
+    return ret
+}
 //vm string:强制编译为系统命令
 function match_vm_string(tool: allang_tools, log: allang_log): vm_tree {
     if (!tool.now()) return null
@@ -1237,8 +1203,33 @@ function match_throw(tool: allang_tools, log: allang_log):throw_tree{
     tool.match_word(';',()=>{log.error('缺少分号',tool.now().line)})
     return ret
 }
+function match_call(tool: allang_tools, log: allang_log):call_tree{
+    if(!tool.now())return null
+    tool.backup()
+    let ret=new call_tree(null,null,true)
+    tool.match_word('await',()=>{
+        ret._await=false
+    })
+    let name=tool.match_type(token_type.identifier,()=>{
+        if(ret._await)log.error('await后无调用',tool.now().line)
+        ret=null
+        tool.restore()
+    })?.name
+    if(!ret)return null
+    ret.name=name
+    ret.param=match_call_param(tool, log)
+    tool.match_word(';',()=>{log.error('缺少分号',tool.now().line)})
+    tool.kill()
+    return ret
+}
 function match_command(tool: allang_tools, log: allang_log):command_tree{
     let a=match_continue(tool, log)
+    if(a)return a
+    a=match_delete(tool, log)
+    if(a)return a
+    a=match_set(tool, log)
+    if(a)return a
+    a=match_call(tool, log)
     if(a)return a
     a=match_break(tool, log)
     if(a)return a
@@ -1248,14 +1239,12 @@ function match_command(tool: allang_tools, log: allang_log):command_tree{
     if(a)return a
     a=match_var_init(tool, log)
     if(a)return a
-    a=match_set(tool, log)
-    if(a)return a
     a=match_throw(tool, log)
     return a
 }
-function match_commands(tool: allang_tools, log: allang_log){
+function match_commands(tool: allang_tools, log: allang_log):command_tree[]{
     let ret:command_tree[]= []
-    tool.match_word('{',()=>{log.error('缺少左括号',tool.now().line)})
+    tool.match_word('{',()=>{log.error('缺少左括号',tool.now()?.line)})
     tool.match_word('}',()=>{
         while(true){
             let a=match_command(tool, log)
@@ -1266,7 +1255,165 @@ function match_commands(tool: allang_tools, log: allang_log){
     })
     return ret
 }
-//try-catch- finally
+function match_condition(tool: allang_tools, log: allang_log):get_node_tree{
+    tool.match_word('(',()=>{log.error('缺少左括号',tool.now().line)})
+    let condition=match_get(tool, log)
+    tool.match_word(')',()=>{log.error('缺少右括号',tool.now().line)})
+    return condition
+}
+//if-else
+function match_if(tool: allang_tools, log: allang_log):if_tree{
+    if(!tool.now())return null
+    tool.backup()
+    let ret=new if_tree(null,null,[],null)
+    tool.match_word('if',()=>{
+        tool.restore()
+        ret=null
+    })
+    if(!ret)return null
+    ret.condition=match_condition(tool,log)
+    ret.commands=match_commands(tool, log)
+    //else if
+    tool._match_word('else',()=>{
+        tool.next()
+        ret.else=match_commands(tool,log)
+        tool.index--
+    },()=>{
+        //循环匹配else if
+        let bk=false
+        while(true){
+            tool.match_word('elif',()=>{
+                bk=true
+                tool._match_word('else',()=>{
+                    tool.next()
+                    ret.else=match_commands(tool,log)
+                    tool.index--
+                },()=>{})
+            })
+            if(bk)break
+            let ls:if_tree=new if_tree(null,null,null,null)
+            ls.condition=match_condition(tool,log)
+            ls.commands=match_commands(tool, log)
+            ret.else_if.push(ls)
+        }
+    })
+    tool.kill()
+    return ret
+}
+//switch
+function match_switch(tool: allang_tools, log: allang_log):switch_tree{
+    if(!tool.now())return null
+    tool.backup()
+    let ret=new switch_tree(null,[],null)
+    tool.match_word('switch',()=>{
+        ret=null
+        tool.restore()
+    })
+    if(!ret)return null
+    ret.condition=match_condition(tool,log)
+    tool.match_word('{',()=>{log.error('缺少左括号',tool.now().line)})
+    //匹配case和default
+    while(true){
+        let bk=false
+        tool._match_word('case',()=>{
+            tool.next()
+            let c=match_get(tool, log)
+            tool.match_word('=>',()=>{log.error('缺少指向',tool.now().line)})
+            ret.cases.push({value:c,call:match_commands(tool, log)})
+            tool.index--
+        },()=>{
+            tool._match_word('default',()=>{
+                tool.next()
+                ret.default=match_commands(tool, log)
+                bk=true
+                tool.index--
+            },()=>{
+                tool._match_word('}',()=>{bk=true},()=>{log.error('缺少右括号',tool.now()?.line)})}
+            )
+        })
+        if(bk)break
+    }
+    tool.kill()
+    return ret
+}
+//while
+function match_while(tool: allang_tools, log: allang_log):while_tree{
+    if(!tool.now())return null
+    tool.backup()
+    let ret=new while_tree(null,null,false)
+    tool._match_word('do',()=>{
+        tool.next()
+        ret.do=true
+        ret.commands=match_commands(tool, log)
+        tool.match_word('while',()=>{log.error('缺少while',tool.now().line)})
+        ret.condition=match_condition(tool,log)
+        tool.index--
+    },()=>{
+        tool.match_word('while',()=> {ret=null})
+        if(ret){
+            ret.condition=match_condition(tool,log)
+            ret.commands=match_commands(tool, log)
+        }
+    })
+    tool.kill()
+    return ret
+}
+//for
+function match_for(tool: allang_tools, log: allang_log):for_tree{
+    if(!tool.now())return null
+    tool.backup()
+    let ret=new for_tree(null,null,null,null)
+    tool.match_word('for',()=>{ret=null})
+    if(!ret)return null
+    tool.match_word('(',()=>{log.error('缺少左括号',tool.now().line)})
+    ret.init=match_commands(tool, log)
+    ret.condition=match_condition(tool,log)
+    ret.step=match_commands(tool, log)
+    tool.match_word(')',()=>{log.error('缺少右括号',tool.now().line)})
+    ret.body=match_commands(tool, log)
+    tool.kill()
+    return ret
+}
+//foreach
+function match_foreach(tool: allang_tools, log: allang_log):foreach_tree{
+    if(!tool.now())return null
+    tool.backup()
+    let ret=new foreach_tree(null,null,null)
+    tool.match_word('foreach',()=>{ret=null})
+    if(!ret)return null
+    tool.match_word('(',()=>{log.error('缺少左括号',tool.now().line)})
+    let name=tool.match_type(token_type.identifier,()=>{ret=null})
+    if(!name)return null
+    tool.match_word(':',()=>{log.error('缺少冒号',tool.now().line)})
+    let type=match_type(tool, log)
+    if(!type)log.error('缺少类型声明',tool.now().line)
+    tool.match_word('as',()=>{log.error('缺少as',tool.now().line)})
+    ret.array=match_get(tool, log)
+    tool.match_word(')',()=>{log.error('缺少右括号',tool.now().line)})
+    ret.commands=match_commands(tool, log)
+    ret.identifier=new identifier_var_tree(name.name,type,null)
+    tool.kill()
+    return ret
+}
+//try-catch-finally
+function match_try(tool: allang_tools, log: allang_log): try_tree{
+    if(!tool.now())return null
+    tool.backup()
+    let ret=new try_tree(null,null,null)
+    tool.match_word('try',()=>{ret=null})
+    if(!ret)return null
+    ret.commands=match_commands(tool, log)
+    tool.match_word('catch',()=>{ret=null})
+    if(!ret)return null
+    ret.catch=match_get_lambda(tool,log)
+    tool._match_word('finally',()=>{
+        tool.next()
+        ret.finally=match_commands(tool, log)
+        tool.index--
+    },()=>{})
+    tool.kill()
+    return ret
+}
 /*
 匹配设值
 a=/+=/-=/...get
@@ -1346,6 +1493,7 @@ function match(tool: allang_tools, log: allang_log): Tree[] {
     let ret: Tree[] = []
     //匹配import
     ret=match_imports(tool, log, ret)
+    ret=match_block_bodies(tool, log)
     return ret
 }
 export {match}
