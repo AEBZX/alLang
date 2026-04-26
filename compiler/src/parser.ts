@@ -18,7 +18,7 @@ import allang_tools from './allang_tools'
 import allang_log from './allang_log'
 import {basic_type, bool_oper_type, math_oper_type, pointer_type} from "./model";
 import {map_type_tree} from "./tree/identifier";
-import {space_tree, try_tree} from "./tree/block";
+import {file_tree, space_tree, try_tree} from "./tree/block";
 import {vm_tree} from "./tree/command";
 
 function match_get(tool: allang_tools, log: allang_log): get_node_tree {
@@ -515,7 +515,7 @@ function match_module_use(tool: allang_tools, log: allang_log, kill: boolean): s
 }
 
 //import a as b或者import a
-function match_import(tool: allang_tools, log: allang_log, tree: Tree[]): Tree[] {
+function match_import(tool: allang_tools, log: allang_log, tree: import_tree[]): import_tree[] {
     tool.backup()
     if (tool.now().name != 'import') {
         tool.restore()
@@ -551,9 +551,9 @@ function match_import(tool: allang_tools, log: allang_log, tree: Tree[]): Tree[]
 }
 
 //匹配import集群
-function match_imports(tool: allang_tools, log: allang_log, tree: Tree[]): Tree[] {
+function match_imports(tool: allang_tools, log: allang_log, tree: import_tree[]): import_tree[] {
     tool.backup()
-    let ret: Tree[] = []
+    let ret: import_tree[] = []
     let len: number
     while (tool.now()) {
         len = ret.length
@@ -1489,11 +1489,11 @@ function match_set(tool: allang_tools, log: allang_log): set_tree {
     tool.match_word(';',()=>{log.error('缺少分号',tool.now().line)})
     return ret
 }
-function match(tool: allang_tools, log: allang_log): Tree[] {
-    let ret: Tree[] = []
+function match(tool: allang_tools, log: allang_log): file_tree {
+    let ret: file_tree=new file_tree(null,null)
     //匹配import
-    ret=match_imports(tool, log, ret)
-    ret=match_block_bodies(tool, log)
+    ret.imports=match_imports(tool, log,[])
+    ret.spaces=match_block_bodies(tool, log)
     return ret
 }
 export {match}

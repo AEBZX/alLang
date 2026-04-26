@@ -162,7 +162,15 @@ class import_tree extends Tree {
         this.module = module
     }
 }
-
+class file_tree extends Tree{
+    imports: import_tree[]
+    spaces: space_tree[]
+    constructor(imports: import_tree[], spaces: space_tree[]) {
+        super()
+        this.imports = imports
+        this.spaces = spaces
+    }
+}
 export {
     annotation_tree,
     modifiers,
@@ -175,5 +183,6 @@ export {
     import_tree,
     enum_tree,
     interface_tree,
-    space_tree,try_tree
+    space_tree,try_tree,
+    file_tree
 }

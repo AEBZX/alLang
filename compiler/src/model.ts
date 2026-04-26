@@ -13,7 +13,7 @@ enum bool_oper_type {
 }
 
 enum basic_type {
-    number, string, boolean, void, map
+    number, string, boolean, void, map,type
 }
 
 //修饰符

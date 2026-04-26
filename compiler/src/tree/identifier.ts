@@ -17,6 +17,7 @@ class identifier_tree extends Tree {
  * 基本类型:map,number,string,boolean,void
  * lambda定义(a:b,a:b)=>a
  * 数组:基本类型[]
+ * 类型定义符:type
  */
 class type_tree extends Tree {
     constructor() {
