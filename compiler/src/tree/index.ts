@@ -9,7 +9,7 @@ import {
     module_tree,
     import_tree,
     enum_tree,
-    interface_tree
+    interface_tree,file_tree
 } from './block'
 import {
     super_tree, call_tree, break_tree, return_tree
@@ -85,7 +85,7 @@ export {
     call_tree,
     break_tree,
     return_tree
-    ,
+    ,file_tree,
     math_set_tree,
     delete_tree,
     set_tree,

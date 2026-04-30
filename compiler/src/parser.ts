@@ -797,8 +797,22 @@ function match_block_body(tool: allang_tools, log: allang_log): space_tree {
     tool.match_word(':', () => {
         log.error('缺少冒号', tool.now().line)
     })
-    ret = match_var_body(tool, log)
-    if (ret && ret instanceof var_tree) {
+    ret = match_interface_body(tool, log)
+    if (ret && ret instanceof interface_tree) {
+        ret.annotations = a
+        ret.modifiers = b
+        ret.name = n
+        return ret
+    }
+    ret = match_enum_body(tool, log)
+    if (ret && ret instanceof enum_tree) {
+        ret.annotations = a
+        ret.modifiers = b
+        ret.name = n
+        return ret
+    }
+    ret = match_class_body(tool, log)
+    if (ret && ret instanceof class_tree) {
         ret.annotations = a
         ret.modifiers = b
         ret.name = n
@@ -819,22 +833,8 @@ function match_block_body(tool: allang_tools, log: allang_log): space_tree {
         ret.name = n
         return ret
     }
-    ret = match_interface_body(tool, log)
-    if (ret && ret instanceof interface_tree) {
-        ret.annotations = a
-        ret.modifiers = b
-        ret.name = n
-        return ret
-    }
-    ret = match_enum_body(tool, log)
-    if (ret && ret instanceof enum_tree) {
-        ret.annotations = a
-        ret.modifiers = b
-        ret.name = n
-        return ret
-    }
-    ret = match_class_body(tool, log)
-    if (ret && ret instanceof class_tree) {
+    ret = match_var_body(tool, log)
+    if (ret && ret instanceof var_tree) {
         ret.annotations = a
         ret.modifiers = b
         ret.name = n
@@ -1243,7 +1243,20 @@ function match_command(tool: allang_tools, log: allang_log):command_tree{
     a=match_var_init(tool, log)
     if(a)return a
     a=match_throw(tool, log)
-    return a
+    if(a)return a
+    a=match_if(tool, log)
+    if(a)return a
+    a=match_foreach(tool, log)
+    if(a)return a
+    a=match_while(tool, log)
+    if(a)return a
+    a=match_switch(tool, log)
+    if(a)return a
+    a=match_try(tool, log)
+    if(a)return a
+    a=match_for(tool, log)
+    if(a)return a
+    if(tool.now().name=='{')return new command_tree(match_commands(tool, log))
 }
 function match_commands(tool: allang_tools, log: allang_log):command_tree[]{
     let ret:command_tree[]= []

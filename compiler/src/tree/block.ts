@@ -162,11 +162,11 @@ class import_tree extends Tree {
         this.module = module
     }
 }
-class file_tree extends Tree{
+class file_tree extends space_tree{
     imports: import_tree[]
     spaces: space_tree[]
     constructor(imports: import_tree[], spaces: space_tree[]) {
-        super()
+        super(null,null,null)
         this.imports = imports
         this.spaces = spaces
     }
