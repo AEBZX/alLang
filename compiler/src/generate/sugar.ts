@@ -4,17 +4,21 @@ import {Tree} from 'allang-compiler-base'
 import allang_log from '../allang_log'
 import allang_tools from '../allang_tools'
 import {
-    body,
-    break_tree,
-    class_tree,
-    enum_tree,
-    func_tree, get_node_tree,
+    basic_type_tree,
+    body, boolean_get_tree,
+    break_tree, call_get_tree, chain_get_tree,
+    class_tree, command_tree,
+    enum_tree, for_tree,
+    func_tree, get_node_tree, get_tree,
     import_tree,
-    interface_tree,
-    module_tree, type_tree,
-    var_tree
+    interface_tree, lambda_get_tree, lambda_type_tree, map_get_tree,
+    module_tree, new_get_tree, null_get_tree, number_get_tree, string_get_tree, type_tree,
+    var_tree, variable_get_tree
 } from '../tree'
 import {file_tree, space_tree} from '../tree/block'
+import {basic_type} from "../model";
+import {class_type_tree} from "../tree/identifier";
+
 function check_import(data:import_tree[],log:allang_log){
     let modules:string[]=[]
     data.forEach((t)=>{
@@ -111,13 +115,60 @@ class scope{
             }else if(ls.type==space_type.var){
                 //类型检测(如果赋值)
                 if(ls.data instanceof var_tree){
-                    if(ls.data.value&&ls.data.value instanceof get_node_tree){
-                    }
+                    if(ls.data.value&&ls.data.value instanceof get_node_tree)
+                        //检测类型
+                        if(ls.data.var_type!=this.getNodeType(ls.data.value))
+                            log.error(`变量${ls.data.name}类型错误`, '')
                 }
             }else if(ls.type==space_type.class){
                 new scope(ls.data.name,this,space_type.class, ls.data.children,log)
+            }else if(ls.type==space_type.func){
+                //重量级选手
+                if(ls.data instanceof func_tree){
+                    if(this.resolve(ls.data.name, space_type.func))log.error(`函数${ls.data.name}重复定义`, '')
+                    //commands检测
+                }
             }
         }
+    }
+    check_commands(commands:command_tree[]){
+        for(let i=0;i<commands.length;i++){
+            let command=commands[i]
+            //脱糖为while进行检测
+            if(command instanceof for_tree){
+            }
+        }
+    }
+    getNodeType(node: get_node_tree): type_tree{
+        let analyzeTree=(tree: get_tree): type_tree | null =>{
+            if (tree instanceof number_get_tree) {
+                return new basic_type_tree(basic_type.number)
+            } else if (tree instanceof string_get_tree) {
+                return new basic_type_tree(basic_type.string)
+            } else if (tree instanceof boolean_get_tree) {
+                return new basic_type_tree(basic_type.boolean)
+            } else if (tree instanceof null_get_tree) {
+                return new basic_type_tree(basic_type.void)
+            } else if (tree instanceof new_get_tree) {
+                return new class_type_tree((this.resolve(tree.name,space_type.class) as class_tree).name)
+            } else if (tree instanceof variable_get_tree) {
+                return (this.resolve(tree.name, space_type.var) as var_tree).var_type
+            } else if (tree instanceof chain_get_tree) {
+                if (tree.chain.length > 0) {
+                    return analyzeTree(tree.chain[tree.chain.length - 1])
+                }
+            } else if (tree instanceof call_get_tree) {
+                return (this.resolve(tree.name, space_type.func) as func_tree).return_type
+            } else if (tree instanceof lambda_get_tree) {
+                // lambda 表达式
+                return new lambda_type_tree(null,null)
+            } else if (tree instanceof map_get_tree) {
+                return new basic_type_tree(basic_type.map)
+            }
+            return null
+        }
+
+        return analyzeTree(node.tree)
     }
     resolve(name:string,type:space_type):space_tree{
         for(let i=0;i<this.spaces.length;i++)

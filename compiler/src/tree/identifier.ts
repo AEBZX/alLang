@@ -24,7 +24,13 @@ class type_tree extends Tree {
         super()
     }
 }
-
+class class_type_tree extends type_tree{
+    type_name: string
+    constructor(type_name: string) {
+        super()
+        this.type_name = type_name
+    }
+}
 class basic_type_tree extends type_tree {
     type_name: basic_type
 
@@ -69,5 +75,5 @@ export {
     basic_type_tree,
     array_type_tree,
     lambda_type_tree,
-    map_type_tree
+    map_type_tree,class_type_tree
 }

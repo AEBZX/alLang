@@ -17,7 +17,7 @@ import {token, token_type, Tree} from 'allang-compiler-base'
 import allang_tools from './allang_tools'
 import allang_log from './allang_log'
 import {basic_type, bool_oper_type, math_oper_type, pointer_type} from "./model";
-import {map_type_tree} from "./tree/identifier";
+import {class_type_tree, map_type_tree} from "./tree/identifier";
 import {file_tree, space_tree, try_tree} from "./tree/block";
 import {vm_tree} from "./tree/command";
 
@@ -625,8 +625,8 @@ function match_type(tool: allang_tools, log: allang_log): type_tree {
     return ret
 }
 
-function match_basic_type(tool: allang_tools, log: allang_log): basic_type_tree {
-    let ret: basic_type_tree = null
+function match_basic_type(tool: allang_tools, log: allang_log): type_tree {
+    let ret: type_tree = null
     if (!tool.now()) return null
     tool._match_word('number', () => {
         ret = new basic_type_tree(basic_type.number)
@@ -640,6 +640,9 @@ function match_basic_type(tool: allang_tools, log: allang_log): basic_type_tree 
                 tool._match_word('void', () => {
                     ret = new basic_type_tree(basic_type.void)
                 }, () => {
+                    let name=match_module_use(tool, log, false)
+                    if(!name) log.error('非法的类名', tool.now().line)
+                    ret=new class_type_tree( name)
                 })
             })
         })
@@ -794,6 +797,13 @@ function match_block_body(tool: allang_tools, log: allang_log): space_tree {
     tool.match_word(':', () => {
         log.error('缺少冒号', tool.now().line)
     })
+    ret = match_var_body(tool, log)
+    if (ret && ret instanceof var_tree) {
+        ret.annotations = a
+        ret.modifiers = b
+        ret.name = n
+        return ret
+    }
     //函数
     ret = match_func_body(tool, log)
     if (ret && ret instanceof func_tree) {
@@ -825,13 +835,6 @@ function match_block_body(tool: allang_tools, log: allang_log): space_tree {
     }
     ret = match_class_body(tool, log)
     if (ret && ret instanceof class_tree) {
-        ret.annotations = a
-        ret.modifiers = b
-        ret.name = n
-        return ret
-    }
-    ret = match_var_body(tool, log)
-    if (ret && ret instanceof var_tree) {
         ret.annotations = a
         ret.modifiers = b
         ret.name = n
