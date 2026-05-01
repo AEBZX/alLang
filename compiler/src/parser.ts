@@ -795,8 +795,6 @@ function match_block_body(tool: allang_tools, log: allang_log): space_tree {
     tool.match_word(':', () => {
         log.error('缺少冒号', tool.now().line)
     })
-
-    // 先检查是否是 module 关键字，因为 module 是特殊语法：name:module{}
     if (tool.now() && tool.now().name === 'module') {
         ret = match_module_body(tool, log)
         if (ret && ret instanceof module_tree) {
@@ -828,14 +826,6 @@ function match_block_body(tool: allang_tools, log: allang_log): space_tree {
         ret.name = n
         return ret
     }
-    //函数
-    ret = match_func_body(tool, log)
-    if (ret && ret instanceof func_tree) {
-        ret.annotations = a
-        ret.modifiers = b
-        ret.name = n
-        return ret
-    }
     ret = match_var_body(tool, log)
     if (ret && ret instanceof var_tree) {
         ret.annotations = a
@@ -843,8 +833,14 @@ function match_block_body(tool: allang_tools, log: allang_log): space_tree {
         ret.name = n
         return ret
     }
+    ret = match_func_body(tool, log)
+    if (ret && ret instanceof func_tree) {
+        ret.annotations = a
+        ret.modifiers = b
+        ret.name = n
+        return ret
+    }
 }
-// ... existing code ...
 
 function match_block_bodies(tool: allang_tools, log: allang_log): space_tree[] {
     let ret: space_tree[] = []
@@ -865,9 +861,14 @@ function match_func_body(tool: allang_tools, log: allang_log): func_tree {
         tool.restore()
         return null
     }
+    tool.match_word('(', () => {
+        tool.restore()
+        return null
+    })
+    tool.index--
     //匹配函数参数
     ret.params = match_param_identifier(tool, log)
-    if(! ret.params){
+    if(!ret.params){
         tool.restore()
         return null
     }
@@ -901,6 +902,7 @@ function match_module_body(tool: allang_tools, log: allang_log): module_tree {
 function match_var_body(tool: allang_tools, log: allang_log): var_tree {
     if (!tool.now()) return null
     tool.backup()
+    let i=tool.index
     let ret: var_tree = new var_tree('', null, null, null, null)
     ret.var_type = match_type(tool, log)
     //可赋值可不赋值
@@ -909,11 +911,19 @@ function match_var_body(tool: allang_tools, log: allang_log): var_tree {
         ret.value = match_get(tool, log)
         tool.index-=1
     }, () => {
-    })
-    //吃掉分号
+    })//吃掉分
+    let kill=false
     tool.match_word(';', () => {
-        log.error('缺少分号', tool.now().line)
+        tool._match_word('(',()=>{
+            kill=true
+        },()=>{
+            log.error('缺少分号', tool.now().line)
+        })
     })
+    if(kill){
+        tool.index=i
+        return null
+    }
     tool.kill()
     return ret
 }

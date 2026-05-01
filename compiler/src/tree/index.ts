@@ -9,7 +9,9 @@ import {
     module_tree,
     import_tree,
     enum_tree,
-    interface_tree,file_tree
+    interface_tree,file_tree,
+    space_tree,
+    try_tree
 } from './block'
 import {
     super_tree, call_tree, break_tree, return_tree
@@ -18,6 +20,7 @@ import {
     for_tree,
     switch_tree,
     foreach_tree,
+    vm_tree,
 } from './command'
 import {
     chain_get_tree,
@@ -109,4 +112,5 @@ export {
     for_tree,
     switch_tree,
     foreach_tree,
+    space_tree,vm_tree,try_tree
 }
