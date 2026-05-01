@@ -789,12 +789,24 @@ function match_block_body(tool: allang_tools, log: allang_log): space_tree {
     let ret: Tree=new Tree()
     let n = tool.match_type(token_type.identifier,
         () => {
-        ret=null
+            ret=null
         })?.name
     if(!ret)return null
     tool.match_word(':', () => {
         log.error('缺少冒号', tool.now().line)
     })
+
+    // 先检查是否是 module 关键字，因为 module 是特殊语法：name:module{}
+    if (tool.now() && tool.now().name === 'module') {
+        ret = match_module_body(tool, log)
+        if (ret && ret instanceof module_tree) {
+            ret.annotations = a
+            ret.modifiers = b
+            ret.name = n
+            return ret
+        }
+    }
+
     ret = match_interface_body(tool, log)
     if (ret && ret instanceof interface_tree) {
         ret.annotations = a
@@ -824,13 +836,6 @@ function match_block_body(tool: allang_tools, log: allang_log): space_tree {
         ret.name = n
         return ret
     }
-    ret = match_module_body(tool, log)
-    if (ret && ret instanceof module_tree) {
-        ret.annotations = a
-        ret.modifiers = b
-        ret.name = n
-        return ret
-    }
     ret = match_var_body(tool, log)
     if (ret && ret instanceof var_tree) {
         ret.annotations = a
@@ -839,6 +844,7 @@ function match_block_body(tool: allang_tools, log: allang_log): space_tree {
         return ret
     }
 }
+// ... existing code ...
 
 function match_block_bodies(tool: allang_tools, log: allang_log): space_tree[] {
     let ret: space_tree[] = []

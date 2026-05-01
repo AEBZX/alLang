@@ -6,10 +6,14 @@ import allang_log from './allang_log'
 import {check} from './check'
 let code = `
 @ABC()
-public b:class{
+public b:module{
+    public static main:void(){
+        a=b;
+    }
 }
 `
 let a = new segment(code, tokens)
 let ls = a.segment()
 let t = new allang_tools(ls)
-let __ls=new check([match(t,new allang_log())],new allang_log())
+let ret = match(t, new allang_log())
+new check([ret], new allang_log()).check_all()
