@@ -27,9 +27,7 @@ function match_get(tool: allang_tools, log: allang_log): get_node_tree {
 
 function match_get_basic(tool: allang_tools, log: allang_log): get_tree {
     if (!tool.now()) return null
-
     let basic: get_tree = null
-
     tool.backup()
     tool._match_type(token_type.number, () => {
         basic = new number_get_tree(parseFloat(tool.now().name))

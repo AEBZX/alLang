@@ -25,5 +25,23 @@ function merge_module(data1:module_tree,data2:module_tree,log:allang_log):module
     let ret=new module_tree(data1.name,data1.modifiers,data1.annotations)
     ret.annotations.push(...data2.annotations)
     ret.children=data1.children.concat(data2.children)
+    let children_module=ret.children.filter((i)=>i instanceof module_tree)
+    ret.children=ret.children.filter((i)=>!(i instanceof module_tree))
+    let children:module_tree[]=[]
+    for(let i=0;i<children_module.length;i++){
+        let finds:module_tree[]=[]
+        for(let j=i+1;j<children_module.length;j++){
+            if(i==j)continue
+            if(children_module[i].name==children_module[j].name)
+                finds.push(children_module[j])
+        }
+        if(finds.length>0){
+            let ls:module_tree=children_module[i]
+            for(let j=0;j<finds.length;j++)
+                ls=merge_module(ls,finds[j],log)
+            children.push(ls)
+        }else children.push(children_module[i])
+    }
+    ret.children.push(...children)
     return ret
 }
