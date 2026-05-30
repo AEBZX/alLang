@@ -1,101 +1,154 @@
-import {token} from '../pre'
-import {log} from '../../base/log'
 
-interface tools{
-    peek():token
-    now():token
-    next():token
-    backup():void
-    restore():void
-    flush():void
-    add(tree:Tree):void
-    remove():void
-    get():Tree[]
-}
-function create_match(func:(tool:tools)=>boolean,error:(log:log,tool:tools)=>void
-                      ,to:(tool:tools)=>Tree):{func:(tool:tools)=>boolean,
-    error:(log:log,tool:tools)=>void,to:(tool:tools)=>Tree}{
-    return {
-        func:func,
-        to:to,
-        error:error
+import {token,token_type} from "../pre";
+export class Tree{
+    constructor() {
     }
 }
-function root_match(tool:tools,parser:(child:Tree[])=>Tree,...match:{func:((tool:tools)=>boolean)
-    ,error:(log:log,tool:tools)=>void,to:(tool:tools)=>Tree}[]):Tree{
-    let func=(tool:tools):boolean=> {
-        for (let i = 0; i < match.length; i++) {
-            if (!match[i].func(tool)) {
-                return false
-            } else
-                tool.add(match[i].to(tool))
+export class Match{
+    tk:token[]
+    constructor(tokens:token[]) {
+        this.tk=tokens
+    }
+    match():{mth:boolean,tokens:(token|Tree)}{
+        return null
+    }
+}
+//基本匹配内容
+export class tokenNameMatch extends Match{
+    name:string
+    constructor(tokens:token[], name:string) {
+        super(tokens)
+        this.name=name
+    }
+    match():{mth:boolean,tokens:(token|Tree)}{
+        let mth=this.tk[0]?.name==this.name
+        let tokens=null
+        if(mth){
+            tokens=this.tk[0]
+            this.tk.shift()
         }
-        return true
+        return {mth,tokens}
     }
-    return func(tool)?parser(tool.get().filter((tree)=>tree.type!=-1)):null
 }
-function list_match(parser:(child:Tree[])=>Tree,error:(log:log,tool:tools)=>void,
-                    ...match:{func:((tool:tools)=>boolean),error:(log:log,tool:tools)=>void,
-                        to:(tool:tools)=>Tree}[]){
-    let func=(tool:tools):boolean=>{
-        for(let i=0;i<match.length;i++){
-            if(!match[i].func(tool)){
-                return false
-            }else
-                tool.add(match[i].to(tool))
+export class tokenTypeMatch extends Match{
+    type:token_type
+    constructor(tokens:token[], type:token_type) {
+        super(tokens)
+        this.type=type
+    }
+    match():{mth:boolean,tokens:(token|Tree)}{
+        let mth=this.tk[0]?.type==this.type
+        let tokens=null
+        if(mth){
+            tokens=this.tk[0]
+            this.tk.shift()
         }
-        return true
+        return {mth,tokens}
     }
-    let to=(tool:tools):Tree=>parser(tool.get().filter((tree)=>tree.type!=-1))
-    return create_match(func,error,to)
 }
-function while_match(parser:(child:Tree[])=>Tree,
-                     start:{func:((tool:tools)=>boolean),error:(log:log,tool:tools)=>void,
-    to:(tool:tools)=>Tree},end:{func:((tool:tools)=>boolean),error:(log:log,tool:tools)=>void,
-    to:(tool:tools)=>Tree},data:{func:((tool:tools)=>boolean),error:(log:log,tool:tools)=>void,
-    to:(tool:tools)=>Tree},split:{func:((tool:tools)=>boolean),error:(log:log,tool:tools)=>void,
-        to:(tool:tools)=>Tree},error:(log:log,tool:tools)=>void){
-    let func=(tool:tools):boolean=>{
-        if(!start.func(tool))return false
-        tool.add(start.to(tool))
-        let _split=false
+//可选匹配
+export class chooseMatch extends Match{
+    _match:Match
+    constructor(match:Match) {
+        super(null)
+        this._match=match
+    }
+    match():{mth:boolean,tokens:(token|Tree)}{
+        let mth=true
+        let tokens=this._match.match().tokens
+        return {mth,tokens}
+    }
+}
+//或匹配
+export class orMatch extends Match{
+    _match:Match[]
+    constructor(...match:Match[]) {
+        super(null)
+        this._match=match
+    }
+    match():{mth:boolean,tokens:(token|Tree)}{
+        let mth=false
+        let tokens=null
+        for(let i=0;i<this._match.length;i++){
+            let m=this._match[i].match()
+            if(m.mth){
+                mth=true
+                tokens=m.tokens
+                break
+            }
+        }
+        return {mth,tokens}
+    }
+}
+//顺序匹配
+export class sequenceMatch extends Match{
+    _match:Match[]
+    _to: (t:(token|Tree)[])=>(token|Tree)
+    constructor(to:(t:(token|Tree)[])=>(token|Tree),...match:Match[]) {
+        super(null)
+        this._match=match
+        this._to=to
+    }
+    match():{mth:boolean,tokens:(token|Tree)}{
+        let mth=true
+        let tokens=[]
+        for(let i=0;i<this._match.length;i++){
+            let m=this._match[i].match()
+            if(!m.mth){
+                mth=false
+                break
+            }
+            tokens.push(m.tokens)
+        }
+        return {mth,tokens:mth?this._to(tokens):null}
+    }
+}
+//循环匹配
+export class loopMatch extends Match{
+    _match:Match
+    _to: (t:(token|Tree)[])=>(token|Tree)
+    constructor(to:(t:(token|Tree)[])=>(token|Tree),match:Match) {
+        super(null)
+        this._match=match
+        this._to=to
+    }
+    match():{mth:boolean,tokens:(token|Tree)}{
+        let mth=true
+        let tokens=[]
+        while(mth){
+            let m=this._match.match()
+            if(!m.mth)
+                break
+            tokens.push(m.tokens)
+        }
+        return {mth,tokens:this._to(tokens)}
+    }
+}
+//带间隔
+export class whileMatch extends Match{
+    _match:Match
+    _to: (t:(token|Tree)[])=>(token|Tree)
+    _space:Match
+    constructor(to:(t:(token|Tree)[])=>(token|Tree),match:Match,space:Match) {
+        super(null)
+        this._match=match
+        this._to=to
+        this._space=space
+    }
+    match():{mth:boolean,tokens:(token|Tree)}{
+        let mth=true
+        let tokens=[]
         while(true){
-            if(!data.func(tool)){
-                if(end.func(tool)){
-                    tool.add(end.to(tool))
-                    return true
-                }
-                if(split.func(tool)){
-                    if(_split)return false
-                    _split=true
-                    tool.add(split.to(tool))
-                    continue
-                }
-                return false
+            let m=this._match.match()
+            if(!m.mth){
+                throw new Error('分隔符后没有匹配物')
             }
-            _split=false
-            tool.add(data.to(tool))
+            tokens.push(m.tokens)
+            let s=this._space.match()
+            //结束
+            if(!s.mth)
+                break
         }
+        return {mth,tokens:this._to(tokens)}
     }
-    let to=(tool:tools):Tree=>parser(tool.get().filter((tree)=>tree.type!=-1))
-    return create_match(func,error,to)
 }
-function or_match(parser:(child:Tree[])=>Tree,error:(log:log,tool:tools)=>void,
-                  ...match:{func:((tool:tools)=>boolean),error:(log:log,tool:tools)=>void,
-                      to:(tool:tools)=>Tree}[]){
-    let func=(tool:tools):boolean=>{
-        for(let i=0;i<match.length;i++){
-            if(match[i].func(tool)){
-                tool.add(match[i].to(tool))
-                return true
-            }
-        }
-        return false
-    }
-    let to=(tool:tools):Tree=>parser(tool.get().filter((tree)=>tree.type!=-1))
-    return create_match(func,error,to)
-}
-class Tree{
-    type:number
-}
-export {tools,Tree,list_match,root_match,create_match,while_match,or_match}

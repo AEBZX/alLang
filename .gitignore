@@ -7,3 +7,4 @@ compiler/node_modules
 compiler/dist
 model.al
 vm/main.exe
+规范.md

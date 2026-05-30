@@ -29,7 +29,6 @@ export default [
     , _token('delete')
     , _token('typeof')
     , _token('void')
-    , _token('instanceof')
     //封装块
     , _token('class')
     , _token('interface')
@@ -38,9 +37,6 @@ export default [
     , _token('module')
     , _token('import')
     , _token('as')
-    //变量
-    , _token('this')
-    , _token('super')
     //数学运算符
     , _token('+')
     , _token('-')

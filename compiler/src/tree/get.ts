@@ -45,7 +45,7 @@ class get_node_tree extends get_tree {
 //(参数定义)=>{函数体}
 
 //bool?a:b
-class ternary_get_tree extends get_tree {
+export class ternary_get_tree extends get_tree {
     condition: get_node_tree
     true_value: get_node_tree
     false_value: get_node_tree
@@ -58,7 +58,7 @@ class ternary_get_tree extends get_tree {
     }
 }
 
-class lambda_get_tree extends get_tree {
+export class lambda_get_tree extends get_tree {
     param: param_identifier_tree
     body: command_tree[]
 
@@ -69,7 +69,7 @@ class lambda_get_tree extends get_tree {
     }
 }
 
-class lambda_call_get_tree extends get_tree {
+export class lambda_call_get_tree extends get_tree {
     params: param_call_tree
     name:string
     constructor(name:string,params: param_call_tree) {
@@ -79,7 +79,7 @@ class lambda_call_get_tree extends get_tree {
     }
 }
 
-class map_get_tree extends get_tree {
+export class map_get_tree extends get_tree {
     map: { key: string, get: get_tree }[]
 
     constructor(map: { key: string, get: get_tree }[]) {
@@ -88,24 +88,24 @@ class map_get_tree extends get_tree {
     }
 }
 
-class call_get_tree extends get_tree {
+export class call_get_tree extends get_tree {
     params: param_call_tree
-    name: string
+    name: get_node_tree
 
-    constructor(name: string, params: param_call_tree) {
+    constructor(name: get_node_tree, params: param_call_tree) {
         super()
         this.name = name
         this.params = params
     }
 }
 
-class new_get_tree extends call_get_tree {
-    constructor(name: string, params: param_call_tree) {
+export class new_get_tree extends call_get_tree {
+    constructor(name: get_node_tree, params: param_call_tree) {
         super(name, params)
     }
 }
 
-class chain_get_tree extends get_tree {
+export class chain_get_tree extends get_tree {
     chain: get_tree[]
 
     constructor(chain: get_tree[]) {
@@ -114,7 +114,7 @@ class chain_get_tree extends get_tree {
     }
 }
 
-class variable_get_tree extends get_tree {
+export class variable_get_tree extends get_tree {
     name: string
 
     constructor(name: string) {
@@ -123,13 +123,13 @@ class variable_get_tree extends get_tree {
     }
 }
 
-class null_get_tree extends get_tree {
+export class null_get_tree extends get_tree {
     constructor() {
         super()
     }
 }
 
-class number_get_tree extends get_tree {
+export class number_get_tree extends get_tree {
     value: number
 
     constructor(value: number) {
@@ -138,7 +138,7 @@ class number_get_tree extends get_tree {
     }
 }
 
-class string_get_tree extends get_tree {
+export class string_get_tree extends get_tree {
     value: string
 
     constructor(value: string) {
@@ -146,17 +146,7 @@ class string_get_tree extends get_tree {
         this.value = value
     }
 }
-
-class typeof_get_tree extends string_get_tree {
-    var: get_tree
-
-    constructor(data: get_tree) {
-        super('')
-        this.var = data
-    }
-}
-
-class boolean_get_tree extends get_tree {
+export class boolean_get_tree extends get_tree {
     value: boolean
 
     constructor(value: boolean) {
@@ -164,39 +154,28 @@ class boolean_get_tree extends get_tree {
         this.value = value
     }
 }
-
-class instanceof_get_tree extends boolean_get_tree {
-    left: get_tree
-    right: get_tree
-
-    constructor(left: get_tree, right: get_tree) {
-        super(false)
-        this.left = left
-        this.right = right
-    }
-}
-
-class pointer_get_tree extends get_tree {
+export class pointer_get_tree extends get_tree {
     oper_type: pointer_type
-
-    constructor(_type: pointer_type) {
+    data: get_tree
+    constructor(_type: pointer_type, data: get_tree) {
         super()
+        this.data = data
         this.oper_type = _type
     }
 }
 
-class array_get_tree extends get_tree {
+export class array_get_tree extends get_tree {
     index: get_node_tree
-    name: string
+    name: get_node_tree
 
-    constructor(name: string, index: get_node_tree) {
+    constructor(name: get_node_tree, index: get_node_tree) {
         super()
         this.name = name
         this.index = index
     }
 }
 
-class bool_oper_get_tree extends get_tree {
+export class bool_oper_get_tree extends get_tree {
     left: get_node_tree
     right: get_node_tree
     oper_type: bool_oper_type
@@ -209,7 +188,7 @@ class bool_oper_get_tree extends get_tree {
     }
 }
 
-class math_oper_get_tree extends get_tree {
+export class math_oper_get_tree extends get_tree {
     left: get_tree
     right: get_tree
     oper_type: math_oper_type
@@ -221,26 +200,10 @@ class math_oper_get_tree extends get_tree {
         this.right = right
     }
 }
-
-export {
-    chain_get_tree,
-    variable_get_tree,
-    null_get_tree,
-    number_get_tree,
-    string_get_tree,
-    boolean_get_tree,
-    pointer_get_tree,
-    array_get_tree,
-    bool_oper_get_tree,
-    math_oper_get_tree,
-    get_tree,
-    get_node_tree,
-    new_get_tree,
-    call_get_tree,
-    map_get_tree,
-    instanceof_get_tree,
-    typeof_get_tree,
-    lambda_get_tree,
-    lambda_call_get_tree,
-    ternary_get_tree
+export class array_data_get_tree extends get_tree {
+    data:get_node_tree[]
+    constructor(data: get_node_tree[]) {
+        super()
+        this.data=data
+    }
 }
