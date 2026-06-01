@@ -1,4 +1,4 @@
-enum token_type{
+enum token_type {
     identifier,
     keyword,
     space,
@@ -6,25 +6,25 @@ enum token_type{
     string,
     unknow
 }
-enum match_type{
+enum match_type {
     number,
     string,
     identifier
 }
-class word{
-    public name:string
-    constructor(name:string) {
-        this.name=name
+class word {
+    public name: string
+    constructor(name: string) {
+        this.name = name
     }
 }
-class token{
-    public name:string
-    public type:token_type
-    public line:string
-    constructor(name:string,type:token_type,line:string) {
-        this.name=name
-        this.type=type
-        this.line=line
+class token {
+    public name: string
+    public type: token_type
+    public line: string
+    constructor(name: string, type: token_type, line: string) {
+        this.name = name
+        this.type = type
+        this.line = line
     }
 }
-export {token,token_type,word,match_type}
+export {token, token_type, word, match_type}

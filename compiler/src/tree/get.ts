@@ -6,14 +6,14 @@ import {identifier_tree, lambda_type_tree, type_tree} from './identifier'
 import {block_tree} from './block'
 
 //根树
-class get_tree extends Tree {
+export class get_tree extends Tree {
     constructor() {
         super()
     }
 }
 
 //根节点
-class get_node_tree extends get_tree {
+export class get_node_tree extends get_tree {
     tree: chain_get_tree
 
     constructor(tree: chain_get_tree) {
@@ -68,7 +68,6 @@ export class lambda_get_tree extends get_tree {
         this.body = body
     }
 }
-
 export class lambda_call_get_tree extends get_tree {
     params: param_call_tree
     name:string
@@ -205,5 +204,25 @@ export class array_data_get_tree extends get_tree {
     constructor(data: get_node_tree[]) {
         super()
         this.data=data
+    }
+}
+
+export class instanceof_get_tree extends get_tree {
+    left: get_node_tree
+    right: get_node_tree
+
+    constructor(left: get_node_tree, right: get_node_tree) {
+        super()
+        this.left = left
+        this.right = right
+    }
+}
+
+export class typeof_get_tree extends get_tree {
+    value: get_node_tree
+
+    constructor(value: get_node_tree) {
+        super()
+        this.value = value
     }
 }

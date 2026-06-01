@@ -5,39 +5,62 @@ function _token(keyword: string): word {
 }
 
 export default [
-    //语法块
-    _token('if')
-    , _token('elif')
-    , _token('else')
-    , _token('for')
-    , _token('foreach')
-    , _token('foreach')
-    , _token('while')
-    , _token('do')
-    , _token('switch')
-    , _token('case')
-    , _token('default')
-    , _token('try')
-    , _token('catch')
-    , _token('finally')
-    //语句
-    , _token('break')
-    , _token('continue')
-    , _token('return')
-    , _token('var')
-    , _token('new')
-    , _token('delete')
-    , _token('typeof')
-    , _token('void')
-    //封装块
+    // 块定义关键字
+    _token('function')
     , _token('class')
     , _token('interface')
     , _token('enum')
-    //标识符
     , _token('module')
+    , _token('var')
+    , _token('const')
+    , _token('of')
+    , _token('implements')
+    // 控制流
+    , _token('if')
+    , _token('else')
+    , _token('switch')
+    , _token('case')
+    , _token('default')
+    , _token('for')
+    , _token('foreach')
+    , _token('while')
+    , _token('do')
+    , _token('try')
+    , _token('catch')
+    , _token('finally')
+    // 语句
+    , _token('break')
+    , _token('continue')
+    , _token('return')
+    , _token('new')
+    , _token('delete')
+    , _token('typeof')
+    , _token('throw')
+    , _token('vm')
+    , _token('await')
     , _token('import')
     , _token('as')
-    //数学运算符
+    // 修饰符
+    , _token('async')
+    , _token('sync')
+    , _token('static')
+    , _token('unstatic')
+    , _token('public')
+    , _token('private')
+    , _token('final')
+    // 类型
+    , _token('void')
+    , _token('boolean')
+    , _token('number')
+    , _token('string')
+    , _token('map')
+    , _token('array')
+    , _token('any')
+    // 值
+    , _token('true')
+    , _token('false')
+    , _token('null')
+    // 数学运算符
     , _token('+')
     , _token('-')
     , _token('*')
@@ -49,11 +72,11 @@ export default [
     , _token('|')
     , _token('^')
     , _token('~')
-    //逻辑运算符
+    // 逻辑运算符
     , _token('!')
     , _token('&&')
     , _token('||')
-    //赋值运算符
+    // 赋值运算符
     , _token('=')
     , _token('+=')
     , _token('-=')
@@ -65,17 +88,16 @@ export default [
     , _token('&=')
     , _token('|=')
     , _token('^=')
-    , _token('~=')
     , _token('++')
     , _token('--')
-    //比较运算符
+    // 比较运算符
     , _token('<')
     , _token('>')
     , _token('<=')
     , _token('>=')
     , _token('==')
     , _token('!=')
-    //括号和其他标点符号
+    // 括号和其他标点符号
     , _token('(')
     , _token(')')
     , _token('{')
@@ -88,28 +110,7 @@ export default [
     , _token(':')
     , _token('?')
     , _token('@')
-    //类型
-    , _token('void')
-    , _token('boolean')
-    , _token('number')
-    , _token('string')
-    , _token('map')
-    //值
-    , _token('true')
-    , _token('false')
-    , _token('null')
-    //修饰符
-    , _token('async')
-    , _token('sync')
-    , _token('await')
-    , _token('static')
-    , _token('public')
-    , _token('private')
-    , _token('final')
-    , _token('implements')
-    //其他
     , _token('=>')
+    , _token('->')
     , _token('...')
-    //虚拟机直接操作
-    ,_token('vm')
 ]

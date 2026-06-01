@@ -2,7 +2,6 @@ import {Tree} from 'allang-compiler-base'
 import {get_node_tree} from './get'
 import {identifier_tree} from './identifier'
 
-//调用树
 class param_call_tree extends Tree {
     args: get_node_tree[]
 
@@ -12,7 +11,6 @@ class param_call_tree extends Tree {
     }
 }
 
-//声明树
 class param_identifier_tree extends Tree {
     param: identifier_tree[]
     other: get_node_tree

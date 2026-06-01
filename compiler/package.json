@@ -4,14 +4,15 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "node.exe --import file:/D:/Program%20Files/JetBrains/WebStorm%202025.1.4.1/plugins/nodeJS/js/ts-file-loader/node_modules/tsx/dist/loader.cjs E:\\alLang\\compiler\\src\\test.ts"
   },
   "keywords": [],
   "author": "",
   "license": "MIT",
   "type": "module",
   "dependencies": {
-    "allang-compiler-base": "^0.0.19"
+    "allang-compiler-base": "^0.0.20"
   },
   "devDependencies": {
     "@types/node": "^25.5.2"

@@ -13,12 +13,11 @@ enum bool_oper_type {
 }
 
 enum basic_type {
-    number, string, boolean, void, map,type
+    number, string, boolean, void_, map, array, type_, any_
 }
 
-//修饰符
 enum modifier {
-    async, sync, static, public, private
+    public_, private_, async_, sync_, static_, unstatic_
 }
 
-export {pointer_type, math_oper_type, bool_oper_type, basic_type}
+export {pointer_type, math_oper_type, bool_oper_type, basic_type, modifier}

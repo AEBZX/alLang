@@ -3,24 +3,23 @@ import {
     modifiers,
     block_tree,
     var_tree,
+    const_tree,
     body,
     func_tree,
     class_tree,
     module_tree,
     import_tree,
     enum_tree,
-    interface_tree,file_tree,
+    interface_tree,
+    file_tree,
     space_tree,
     try_tree
 } from './block'
 import {
-    super_tree, call_tree, break_tree, return_tree
-    , math_set_tree, delete_tree, set_tree, identifier_var_tree, command_tree, throw_tree, continue_tree, if_tree,
-    while_tree,
-    for_tree,
-    switch_tree,
-    foreach_tree,
-    vm_tree,
+    super_tree, call_tree, break_tree, return_tree,
+    math_set_tree, delete_tree, set_tree, identifier_var_tree,
+    command_tree, throw_tree, continue_tree, if_tree,
+    while_tree, for_tree, switch_tree, foreach_tree, vm_tree
 } from './command'
 import {
     chain_get_tree,
@@ -42,14 +41,17 @@ import {
     typeof_get_tree,
     lambda_get_tree,
     lambda_call_get_tree,
-    ternary_get_tree
+    ternary_get_tree,
+    array_data_get_tree
 } from './get'
 import {
     identifier_tree,
     type_tree,
     basic_type_tree,
     array_type_tree,
-    lambda_type_tree
+    lambda_type_tree,
+    map_type_tree,
+    class_type_tree
 } from './identifier'
 import {
     param_call_tree,
@@ -64,6 +66,8 @@ export {
     basic_type_tree,
     array_type_tree,
     lambda_type_tree,
+    map_type_tree,
+    class_type_tree,
     chain_get_tree,
     variable_get_tree,
     null_get_tree,
@@ -84,11 +88,12 @@ export {
     lambda_get_tree,
     lambda_call_get_tree,
     ternary_get_tree,
+    array_data_get_tree,
     super_tree,
     call_tree,
     break_tree,
-    return_tree
-    ,file_tree,
+    return_tree,
+    file_tree,
     math_set_tree,
     delete_tree,
     set_tree,
@@ -100,6 +105,7 @@ export {
     modifiers,
     block_tree,
     var_tree,
+    const_tree,
     body,
     func_tree,
     class_tree,
@@ -112,5 +118,7 @@ export {
     for_tree,
     switch_tree,
     foreach_tree,
-    space_tree,vm_tree,try_tree
+    space_tree,
+    vm_tree,
+    try_tree
 }

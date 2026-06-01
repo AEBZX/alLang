@@ -1,7 +1,6 @@
 import {Tree} from 'allang-compiler-base'
 import {basic_type} from '../model'
 
-//标识符:类型
 class identifier_tree extends Tree {
     key: string
     value: type_tree
@@ -13,24 +12,20 @@ class identifier_tree extends Tree {
     }
 }
 
-/*
- * 基本类型:map,number,string,boolean,void
- * lambda定义(a:b,a:b)=>a
- * 数组:基本类型[]
- * 类型定义符:type
- */
 class type_tree extends Tree {
     constructor() {
         super()
     }
 }
-class class_type_tree extends type_tree{
+
+class class_type_tree extends type_tree {
     type_name: string
     constructor(type_name: string) {
         super()
         this.type_name = type_name
     }
 }
+
 class basic_type_tree extends type_tree {
     type_name: basic_type
 
@@ -75,5 +70,6 @@ export {
     basic_type_tree,
     array_type_tree,
     lambda_type_tree,
-    map_type_tree,class_type_tree
+    map_type_tree,
+    class_type_tree
 }
