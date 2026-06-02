@@ -3,7 +3,7 @@
 alc/target
 base/dist/
 .lingma
-compiler/node_modules
+node_modules
 compiler/dist
 model.al
 vm/main.exe

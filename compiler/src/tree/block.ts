@@ -140,6 +140,7 @@ class class_tree extends space_tree {
                 modifiers: modifiers, annotations: annotation_tree[]) {
         super(name, modifiers, annotations)
         this.implements = implements_name || 'Lang.ObjectInterface'
+        if(name=='ObjectInterface'||name=='Lang.ObjectInterface')this.implements=''
     }
 }
 
@@ -161,6 +162,7 @@ class interface_tree extends space_tree {
     constructor(name: string, of_name: string, func: func_tree[], modifiers: modifiers, annotations: annotation_tree[]) {
         super(name, modifiers, annotations)
         this.of = of_name || 'Lang.ObjectInterface'
+        if(name=='ObjectInterface'||name=='Lang.ObjectInterface')this.of=''
         this.func = func
     }
 }

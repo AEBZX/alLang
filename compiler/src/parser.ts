@@ -807,9 +807,9 @@ function parseClassBody(
     if (ts.now() && ts.now().name === 'implements') {
         ts.next()
         implements_name = parseModulePath(ts)
-        if (!implements_name) implements_name = 'ObjectInterface'
+        if (!implements_name) implements_name = 'Lang.ObjectInterface'
     } else {
-        implements_name = 'ObjectInterface'
+        implements_name = 'Lang.ObjectInterface'
     }
     if (!expect(ts, '{')) {
         ts.restore(pos)
@@ -841,9 +841,9 @@ function parseInterfaceBody(
     if (ts.now() && ts.now().name === 'of') {
         ts.next()
         of_name = parseModulePath(ts)
-        if (!of_name) of_name = 'ObjectInterface'
+        if (!of_name) of_name = 'Lang.ObjectInterface'
     } else {
-        of_name = 'ObjectInterface'
+        of_name = 'Lang.ObjectInterface'
     }
     if (!expect(ts, '{')) {
         ts.restore(pos)
