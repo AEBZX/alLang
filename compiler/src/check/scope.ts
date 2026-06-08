@@ -260,54 +260,98 @@ export class ScopeBuilder {
     // ========== 模块合并 ==========
 
     mergeModules(scope: Scope) {
-        // 对于 root scope，先铺平所有 file scope 的子作用域
-        if (scope.kind === 'root') {
-            // 收集所有 file scope 下的顶级模块
-            const allModules = new Map<string, Scope[]>()
-            for (const fileScope of scope.children) {
-                const remaining: Scope[] = []
-                for (const child of fileScope.children) {
-                    if (child.kind === 'module') {
-                        const existing = allModules.get(child.name)
-                        if (existing) existing.push(child)
-                        else allModules.set(child.name, [child])
-                    } else {
-                        remaining.push(child)
-                    }
-                }
-                // 暂时保留非模块的子作用域
-                // 合并后的模块将放在第一个 file scope 中
-            }
+        // 递归：先合并子级
+        for (const child of scope.children) {
+            this.mergeModules(child)
+        }
 
-            // 合并同名模块
-            for (const [name, mods] of allModules) {
-                if (mods.length <= 1) continue
-                const first = mods[0]
-                for (let i = 1; i < mods.length; i++) {
-                    const other = mods[i]
-                    for (const child of other.children) {
-                        child.parent = first
-                        first.children.push(child)
-                    }
-                    for (const [dname, decls] of other.declarations) {
-                        for (const d of decls) {
-                            d.scope = first
-                            first.addDecl(d)
-                        }
-                    }
-                    // 从原 file scope 中移除
-                    const parentChildren = other.parent?.children
-                    if (parentChildren) {
-                        const idx = parentChildren.indexOf(other)
-                        if (idx >= 0) parentChildren.splice(idx, 1)
-                    }
+        // 当前层级：合并同名模块
+        this.mergeModulesAtLevel(scope)
+
+        // root 特殊处理：跨文件合并同名模块
+        if (scope.kind === 'root') {
+            this.mergeAcrossFiles(scope)
+        }
+    }
+
+    mergeAcrossFiles(root: Scope) {
+        // 收集所有 file scope 下的顶级模块
+        const allModules = new Map<string, Scope[]>()
+        for (const fileScope of root.children) {
+            for (const child of fileScope.children) {
+                if (child.kind === 'module') {
+                    const existing = allModules.get(child.name)
+                    if (existing) existing.push(child)
+                    else allModules.set(child.name, [child])
                 }
             }
         }
 
-        // 递归合并子作用域中的模块
+        // 合并跨文件的同名模块
+        for (const [name, mods] of allModules) {
+            if (mods.length <= 1) continue
+            const first = mods[0]
+            for (let i = 1; i < mods.length; i++) {
+                const other = mods[i]
+                // 移动 children
+                for (const child of other.children) {
+                    child.parent = first
+                    first.children.push(child)
+                }
+                // 合并 declarations
+                for (const [dname, decls] of other.declarations) {
+                    for (const d of decls) {
+                        d.scope = first
+                        first.addDecl(d)
+                    }
+                }
+                // 从原父级移除
+                const parentChildren = other.parent?.children
+                if (parentChildren) {
+                    const idx = parentChildren.indexOf(other)
+                    if (idx >= 0) parentChildren.splice(idx, 1)
+                }
+            }
+            // 递归合并被合并模块内部的同名子模块
+            this.mergeModulesAtLevel(first)
+        }
+    }
+
+    mergeModulesAtLevel(scope: Scope) {
+        // 收集当前 scope 下的同名模块
+        const moduleGroups = new Map<string, Scope[]>()
         for (const child of scope.children) {
-            this.mergeModules(child)
+            if (child.kind === 'module') {
+                const existing = moduleGroups.get(child.name)
+                if (existing) existing.push(child)
+                else moduleGroups.set(child.name, [child])
+            }
+        }
+
+        // 合并每组同名模块
+        for (const [name, mods] of moduleGroups) {
+            if (mods.length <= 1) continue
+            const first = mods[0]
+            for (let i = 1; i < mods.length; i++) {
+                const other = mods[i]
+                // 合并 children
+                for (const child of other.children) {
+                    child.parent = first
+                    first.children.push(child)
+                }
+                // 合并 declarations
+                for (const [dname, decls] of other.declarations) {
+                    for (const d of decls) {
+                        d.scope = first
+                        first.addDecl(d)
+                    }
+                }
+                // 从父级移除
+                const idx = scope.children.indexOf(other)
+                if (idx >= 0) scope.children.splice(idx, 1)
+            }
+            // 递归合并被合并模块内部的同名子模块
+            this.mergeModulesAtLevel(first)
         }
     }
 }

@@ -41,23 +41,27 @@ export function desugarAll(files: file_tree[]): file_tree {
     // Step 1: 每个文件独立处理别名，再合并（避免跨文件别名冲突）
     const processedFiles = files.map(f => processFileBeforeMerge(f))
     let file = mergeFiles(processedFiles)
+    // Step 1.5: 合并同名模块（跨文件 module 合并）
+    file = mergeModules(file)
     // Step 2: enum → class
     file = desugarEnums(file)
-    // Step 5: static → global pool
+    // Step 3: switch → map 转换
+    file = desugarSwitch(file)
+    // Step 4: static → global pool
     file = desugarStatic(file)
-    // Step 6: 循环展开
+    // Step 5: 循环展开
     file = desugarForeach(file)
     file = desugarDoWhile(file)
     file = desugarFor(file)
-    // Step 7: String/Array/Map 操作展开
+    // Step 6: String/Array/Map 操作展开
     file = desugarExpressions(file)
-    // Step 8: map.xxx → map['xxx']
+    // Step 7: map.xxx → map['xxx']
     file = desugarMapAccess(file)
-    // Step 9: condition 非bool → != null
+    // Step 8: condition 非bool → != null
     file = desugarConditions(file)
-    // Step 10: 删除 interface
+    // Step 9: 删除 interface
     file = deleteInterfaces(file)
-    // Step 11: class → constructor 函数
+    // Step 10: class → constructor 函数
     file = desugarClasses(file)
     return file
 }
@@ -78,6 +82,68 @@ function mergeFiles(files: file_tree[]): file_tree {
         allSpaces.push(...f.spaces)
     }
     return new file_tree(allImports, allSpaces)
+}
+
+// ========== Step 1.5: 合并同名模块 ==========
+
+function mergeModules(file: file_tree): file_tree {
+    file.spaces = mergeModulesAtLevel(file.spaces)
+    return file
+}
+
+function mergeModulesAtLevel(spaces: space_tree[]): space_tree[] {
+    // 按名称分组 module_tree
+    const moduleGroups = new Map<string, module_tree[]>()
+    const nonModules: space_tree[] = []
+
+    for (const space of spaces) {
+        if (space instanceof module_tree) {
+            const existing = moduleGroups.get(space.name)
+            if (existing) {
+                existing.push(space)
+            } else {
+                moduleGroups.set(space.name, [space])
+            }
+        } else {
+            nonModules.push(space)
+        }
+    }
+
+    const result: space_tree[] = []
+
+    // 合并同名模块
+    for (const [name, modules] of moduleGroups) {
+        if (modules.length === 1) {
+            // 仅一个 — 仍需递归处理子模块
+            const mod = modules[0]
+            if (mod.children && mod.children.length > 0) {
+                mod.children = mergeModulesAtLevel(mod.children)
+            }
+            result.push(mod)
+        } else {
+            // 多个同名模块 — 合并
+            const merged = new module_tree(name, modules[0].modifiers, modules[0].annotations)
+            const allChildren: space_tree[] = []
+            for (const mod of modules) {
+                if (mod.children) {
+                    allChildren.push(...mod.children)
+                }
+            }
+            // 递归合并子模块
+            merged.children = mergeModulesAtLevel(allChildren)
+            result.push(merged)
+        }
+    }
+
+    // 非模块直接追加（也可能有嵌套模块需要合并）
+    for (const space of nonModules) {
+        if (space.children && space.children.length > 0) {
+            space.children = mergeModulesAtLevel(space.children)
+        }
+        result.push(space)
+    }
+
+    return result
 }
 
 // ========== 文件预处理: 默认导入 + 别名解析 (每个文件独立执行，避免跨文件别名冲突) ==========
@@ -236,7 +302,97 @@ function desugarEnumInSpace(space: space_tree): space_tree {
     return space
 }
 
-// ========== Step 5: Static → Global Pool ==========
+// ========== Step 3: Switch → If-Else 链 ==========
+// switch(a) { case v1->{xxx} case v2->{xxx} default->{xxx} }
+// → if(a == v1) { xxx } else if(a == v2) { xxx } else { xxx }
+
+function desugarSwitch(file: file_tree): file_tree {
+    file.spaces = file.spaces.map(s => desugarSwitchInSpace(s))
+    return file
+}
+
+function desugarSwitchInSpace(space: space_tree): space_tree {
+    if (space.children) space.children = space.children.map(c => desugarSwitchInSpace(c))
+    if (space instanceof func_tree && space.commands) {
+        space.commands = desugarSwitchInCommands(space.commands)
+    }
+    return space
+}
+
+function desugarSwitchInCommands(commands: command_tree[]): command_tree[] {
+    const result: command_tree[] = []
+    for (const cmd of commands) {
+        if (cmd instanceof switch_tree) {
+            // switch(a) { case v1->{xxx} case v2->{xxx} default->{xxx} }
+            // → if(a == v1) { xxx } else if(a == v2) { xxx } else { xxx }
+            const condExpr = cmd.condition
+            if (cmd.cases.length === 0) {
+                if (cmd.default) result.push(...cmd.default)
+                continue
+            }
+
+            // 构建 else-if 链
+            // 第一个 case 作为 if 主体
+            const firstCase = cmd.cases[0]
+            const firstCond = get_node_tree.create([
+                new bool_oper_get_tree(bool_oper_type.equal, condExpr,
+                    firstCase.value instanceof get_tree
+                        ? get_node_tree.create([firstCase.value])
+                        : get_node_tree.create([firstCase.value]))
+            ])
+
+            // 构建 else-if 链
+            const elseIfs: if_tree[] = []
+            for (let i = 1; i < cmd.cases.length; i++) {
+                const c = cmd.cases[i]
+                const eiCond = get_node_tree.create([
+                    new bool_oper_get_tree(bool_oper_type.equal, condExpr,
+                        c.value instanceof get_tree
+                            ? get_node_tree.create([c.value])
+                            : get_node_tree.create([c.value]))
+                ])
+                elseIfs.push(new if_tree(eiCond, c.call || [], [], null))
+            }
+
+            // 构建完整的 if-elseif-else，并递归处理其内部的 switch
+            const ifCmd = new if_tree(firstCond, firstCase.call || [], elseIfs, cmd.default || [])
+            recurseCommandsForSwitch(ifCmd)
+            result.push(ifCmd)
+        } else {
+            // 递归处理所有包含子命令的类型
+            recurseCommandsForSwitch(cmd)
+            result.push(cmd)
+        }
+    }
+    return result
+}
+
+function recurseCommandsForSwitch(cmd: command_tree) {
+    if (cmd instanceof if_tree) {
+        if (cmd.commands) cmd.commands = desugarSwitchInCommands(cmd.commands)
+        if (cmd.else) cmd.else = desugarSwitchInCommands(cmd.else)
+        if (cmd.else_if) {
+            for (const ei of cmd.else_if) {
+                if (ei.commands) ei.commands = desugarSwitchInCommands(ei.commands)
+            }
+        }
+    } else if (cmd instanceof while_tree) {
+        if (cmd.commands) cmd.commands = desugarSwitchInCommands(cmd.commands)
+    } else if (cmd instanceof for_tree) {
+        if (cmd.body) cmd.body = desugarSwitchInCommands(cmd.body)
+    } else if (cmd instanceof try_tree) {
+        if (cmd.commands) cmd.commands = desugarSwitchInCommands(cmd.commands)
+        if (cmd.catch && cmd.catch.body) cmd.catch.body = desugarSwitchInCommands(cmd.catch.body)
+        if (cmd.finally) cmd.finally = desugarSwitchInCommands(cmd.finally)
+    } else if (cmd instanceof switch_tree) {
+        for (const c of cmd.cases) {
+            if (c.call) c.call = desugarSwitchInCommands(c.call)
+        }
+        if (cmd.default) cmd.default = desugarSwitchInCommands(cmd.default)
+    }
+}
+
+// ========== Step 4: Static → Global Pool ==========
 
 function desugarStatic(file: file_tree): file_tree {
     file.spaces = processStaticSpaces(file.spaces, '')
@@ -248,15 +404,29 @@ function processStaticSpaces(spaces: space_tree[], prefix: string): space_tree[]
     for (const space of spaces) {
         const name = prefix ? prefix + '.' + space.name : space.name
         if (space.modifiers && space.modifiers.static && !space.modifiers.unstatic) {
-            // static 成员 — 提升到全局
+            // static 成员 — 提升到当前级别
             space.name = name
             space.modifiers.static = false
             space.modifiers.unstatic = true
             result.push(space)
         } else if (space instanceof module_tree || space instanceof class_tree) {
-            // 递归处理子成员
-            if (space.children) {
-                space.children = processStaticSpaces(space.children, name)
+            // 处理子成员：static 子成员提升到当前级别，非 static 保留
+            if (space.children && space.children.length > 0) {
+                const newChildren: space_tree[] = []
+                for (const child of space.children) {
+                    const origName = child.name
+                    const childResult = processStaticSpaces([child], name)
+                    for (const item of childResult) {
+                        // 名称被改变 → 被提升了，放到当前级别
+                        // 名称未改变 → 保留为子成员
+                        if (item === child && item.name === origName) {
+                            newChildren.push(item)
+                        } else {
+                            result.push(item)
+                        }
+                    }
+                }
+                space.children = newChildren
             }
             result.push(space)
         } else if (space instanceof func_tree) {
@@ -266,7 +436,19 @@ function processStaticSpaces(spaces: space_tree[], prefix: string): space_tree[]
             result.push(space)
         } else {
             if (space.children) {
-                space.children = processStaticSpaces(space.children, name)
+                const newChildren: space_tree[] = []
+                for (const child of space.children) {
+                    const origName = child.name
+                    const childResult = processStaticSpaces([child], name)
+                    for (const item of childResult) {
+                        if (item === child && item.name === origName) {
+                            newChildren.push(item)
+                        } else {
+                            result.push(item)
+                        }
+                    }
+                }
+                space.children = newChildren
             }
             result.push(space)
         }
@@ -319,13 +501,29 @@ function desugarForeachInCommands(commands: command_tree[]): command_tree[] {
 
             result.push(varDecl, whileStmt)
         } else {
-            // 递归处理子命令
-            if (cmd instanceof if_tree && cmd.commands) {
-                cmd.commands = desugarForeachInCommands(cmd.commands)
+            // 递归处理所有包含子命令的类型
+            if (cmd instanceof if_tree) {
+                if (cmd.commands) cmd.commands = desugarForeachInCommands(cmd.commands)
                 if (cmd.else) cmd.else = desugarForeachInCommands(cmd.else)
-            }
-            if (cmd instanceof while_tree && cmd.commands) {
-                cmd.commands = desugarForeachInCommands(cmd.commands)
+                if (cmd.else_if) {
+                    for (const ei of cmd.else_if) {
+                        if (ei.commands) ei.commands = desugarForeachInCommands(ei.commands)
+                    }
+                }
+            } else if (cmd instanceof while_tree) {
+                if (cmd.commands) cmd.commands = desugarForeachInCommands(cmd.commands)
+            } else if (cmd instanceof for_tree) {
+                if (cmd.commands) cmd.commands = desugarForeachInCommands(cmd.commands)
+                if (cmd.body) cmd.body = desugarForeachInCommands(cmd.body)
+            } else if (cmd instanceof switch_tree) {
+                if (cmd.commands) cmd.commands = desugarForeachInCommands(cmd.commands)
+                for (const c of cmd.cases) {
+                    if (c.call) c.call = desugarForeachInCommands(c.call)
+                }
+                if (cmd.default) cmd.default = desugarForeachInCommands(cmd.default)
+            } else if (cmd instanceof try_tree) {
+                if (cmd.commands) cmd.commands = desugarForeachInCommands(cmd.commands)
+                if (cmd.finally) cmd.finally = desugarForeachInCommands(cmd.finally)
             }
             result.push(cmd)
         }
@@ -358,8 +556,30 @@ function desugarDoWhileInCommands(commands: command_tree[]): command_tree[] {
             const whileStmt = new while_tree(cmd.condition, [...body], false)
             result.push(blockFirst, whileStmt)
         } else {
-            if (cmd.commands) cmd.commands = desugarDoWhileInCommands(cmd.commands)
-            if (cmd instanceof if_tree && cmd.else) cmd.else = desugarDoWhileInCommands(cmd.else)
+            // 递归处理所有包含子命令的类型
+            if (cmd instanceof if_tree) {
+                if (cmd.commands) cmd.commands = desugarDoWhileInCommands(cmd.commands)
+                if (cmd.else) cmd.else = desugarDoWhileInCommands(cmd.else)
+                if (cmd.else_if) {
+                    for (const ei of cmd.else_if) {
+                        if (ei.commands) ei.commands = desugarDoWhileInCommands(ei.commands)
+                    }
+                }
+            } else if (cmd instanceof while_tree) {
+                if (cmd.commands) cmd.commands = desugarDoWhileInCommands(cmd.commands)
+            } else if (cmd instanceof for_tree) {
+                if (cmd.commands) cmd.commands = desugarDoWhileInCommands(cmd.commands)
+                if (cmd.body) cmd.body = desugarDoWhileInCommands(cmd.body)
+            } else if (cmd instanceof switch_tree) {
+                if (cmd.commands) cmd.commands = desugarDoWhileInCommands(cmd.commands)
+                for (const c of cmd.cases) {
+                    if (c.call) c.call = desugarDoWhileInCommands(c.call)
+                }
+                if (cmd.default) cmd.default = desugarDoWhileInCommands(cmd.default)
+            } else if (cmd instanceof try_tree) {
+                if (cmd.commands) cmd.commands = desugarDoWhileInCommands(cmd.commands)
+                if (cmd.finally) cmd.finally = desugarDoWhileInCommands(cmd.finally)
+            }
             result.push(cmd)
         }
     }
@@ -413,8 +633,30 @@ function desugarForInCommands(commands: command_tree[]): command_tree[] {
 
             result.push(...initBody, condDecl, stepDecl, whileStmt)
         } else {
-            if (cmd.commands) cmd.commands = desugarForInCommands(cmd.commands)
-            if (cmd instanceof if_tree && cmd.else) cmd.else = desugarForInCommands(cmd.else)
+            // 递归处理所有包含子命令的类型
+            if (cmd instanceof if_tree) {
+                if (cmd.commands) cmd.commands = desugarForInCommands(cmd.commands)
+                if (cmd.else) cmd.else = desugarForInCommands(cmd.else)
+                if (cmd.else_if) {
+                    for (const ei of cmd.else_if) {
+                        if (ei.commands) ei.commands = desugarForInCommands(ei.commands)
+                    }
+                }
+            } else if (cmd instanceof while_tree) {
+                if (cmd.commands) cmd.commands = desugarForInCommands(cmd.commands)
+            } else if (cmd instanceof for_tree) {
+                if (cmd.commands) cmd.commands = desugarForInCommands(cmd.commands)
+                if (cmd.body) cmd.body = desugarForInCommands(cmd.body)
+            } else if (cmd instanceof switch_tree) {
+                if (cmd.commands) cmd.commands = desugarForInCommands(cmd.commands)
+                for (const c of cmd.cases) {
+                    if (c.call) c.call = desugarForInCommands(c.call)
+                }
+                if (cmd.default) cmd.default = desugarForInCommands(cmd.default)
+            } else if (cmd instanceof try_tree) {
+                if (cmd.commands) cmd.commands = desugarForInCommands(cmd.commands)
+                if (cmd.finally) cmd.finally = desugarForInCommands(cmd.finally)
+            }
             result.push(cmd)
         }
     }
@@ -494,16 +736,21 @@ function desugarGet(get: get_tree): get_tree {
         if (get.left) get.left = desugarGetExpr(get.left)
         if (get.right) get.right = desugarGetExpr(get.right)
     } else if (get instanceof array_get_tree) {
-        // string[i] → Lang.String.get(string, i)
-        if (get.name && get.name.tree) {
-            const firstElem = get.name.tree.chain[0]
-            if (firstElem instanceof variable_get_tree) {
-                const varName = firstElem.name
-                // 检查是否是 string 类型（简化：总是转换）
-                if (varName && get.index) {
-                    // 这里需要类型信息才能判断，先做通用转换
-                    get.name = desugarGetExpr(get.name)
-                }
+        // x[i] → Lang.Array.get(x, i) 或 Lang.Map.get(x, 'key')
+        // 根据 desugar.md: string[i] → Lang.String.get(string, i)
+        if (get.name && get.index) {
+            // 先递归 desugar name 和 index
+            get.name = desugarGetExpr(get.name)
+            get.index = desugarGetExpr(get.index)
+            // 根据 index 类型判断是数组下标还是映射键
+            const indexChain = get.index.tree?.chain
+            if (indexChain && indexChain.length > 0 &&
+                indexChain[0] instanceof string_get_tree) {
+                // map['key'] → Lang.Map.get(map, 'key')
+                return createCallGet('Lang.Map.get', [get.name, get.index])
+            } else {
+                // array[i] 或 string[i] → Lang.Array.get(array, i)
+                return createCallGet('Lang.Array.get', [get.name, get.index])
             }
         }
         if (get.name) get.name = desugarGetExpr(get.name)
@@ -511,7 +758,8 @@ function desugarGet(get: get_tree): get_tree {
     } else if (get instanceof chain_get_tree) {
         get.chain = get.chain.map(e => desugarGet(e))
     } else if (get instanceof call_get_expr) {
-        // a.xxx(b,c) 转换为 Lang.Type.xxx(a,b,c)
+        // a.xxx(b,c) 转换为 a.xxx(&a,b,c)
+        // 根据 desugar.md: 对类对象调用的如a.b(c,d);替换为a.b(&a,c,d)
         if (get.name && get.name.tree) {
             const chain = get.name.tree.chain
             if (chain.length >= 2) {
@@ -520,10 +768,14 @@ function desugarGet(get: get_tree): get_tree {
                 if (first instanceof variable_get_tree && second instanceof variable_get_tree) {
                     const objName = first.name
                     const method = second.name
-                    // 判断类型（简化处理）
                     const args = get.params?.args || []
+                    // 创建 &a (指针引用) 作为第一个参数（self-reference）
+                    const selfRef = get_node_tree.create([
+                        new pointer_get_tree(pointer_type.address,
+                            new variable_get_tree(objName))
+                    ])
                     const newCall = createCallGet(objName + '.' + method,
-                        [get.name, ...args])
+                        [selfRef, ...args])
                     return newCall
                 }
             }
@@ -581,8 +833,46 @@ function desugarMapAccessExpr(node: get_node_tree): get_node_tree {
 
 function desugarMapAccessGet(get: get_tree): get_tree {
     if (get instanceof chain_get_tree) {
-        // a.b → a['b'] (如果是链中间)
-        get.chain = get.chain.map(e => desugarMapAccessGet(e))
+        // a.b → a['b'] — 根据 desugar.md: 对于map.xxx,替换为map['xxx']
+        const chain = get.chain.map(e => desugarMapAccessGet(e))
+        // 将相邻的 variable_get_tree 对转换为 array_get_tree
+        // 例如 [a, b, c] → [a['b'], c] → [a['b']['c']]
+        const result: get_tree[] = []
+        let i = 0
+        while (i < chain.length) {
+            if (i + 1 < chain.length &&
+                chain[i] instanceof variable_get_tree &&
+                chain[i + 1] instanceof variable_get_tree) {
+                // a.b → a['b']
+                const arrAccess = new array_get_tree(
+                    get_node_tree.create([chain[i]]),
+                    get_node_tree.create([new string_get_tree((chain[i + 1] as variable_get_tree).name)])
+                )
+                result.push(arrAccess)
+                i += 2
+            } else if (i + 1 < chain.length &&
+                chain[i] instanceof array_get_tree &&
+                chain[i + 1] instanceof variable_get_tree) {
+                // a['b'].c → a['b']['c']
+                const arrAccess = new array_get_tree(
+                    get_node_tree.create([chain[i]]),
+                    get_node_tree.create([new string_get_tree((chain[i + 1] as variable_get_tree).name)])
+                )
+                result.push(arrAccess)
+                i += 2
+            } else {
+                result.push(chain[i])
+                i++
+            }
+        }
+        get.chain = result
+    } else if (get instanceof variable_get_tree) {
+        // 单独的变量名保持不变
+    } else if (get instanceof call_get_expr) {
+        if (get.name) get.name = desugarMapAccessExpr(get.name)
+        if (get.params && get.params.args) {
+            get.params.args = get.params.args.map(a => desugarMapAccessExpr(a))
+        }
     }
     return get
 }
@@ -786,7 +1076,27 @@ function wrapInGetNode(get: get_tree): get_node_tree {
     return get_node_tree.create([get])
 }
 
-function isStringExpr(_get: get_tree): boolean {
+function isStringExpr(get: get_tree): boolean {
+    if (get instanceof string_get_tree) return true
+    if (get instanceof variable_get_tree) {
+        // 常见 string 变量名启发式
+        const name = get.name.toLowerCase()
+        if (name.includes('str') || name.includes('string') ||
+            name.includes('name') || name.includes('text')) return true
+    }
+    if (get instanceof math_oper_get_tree && get.oper_type === math_oper_type.add) {
+        // 检查左右是否为字符串
+        return isStringExpr(get.left) || isStringExpr(get.right)
+    }
+    if (get instanceof call_get_expr) {
+        // 检查是否是 Lang.String.* 方法的返回值
+        const nameChain = get.name?.tree?.chain
+        if (nameChain) {
+            for (const c of nameChain) {
+                if (c instanceof variable_get_tree && c.name === 'Lang.String') return true
+            }
+        }
+    }
     return false
 }
 

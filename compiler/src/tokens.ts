@@ -60,7 +60,7 @@ export default [
     , _token('true')
     , _token('false')
     , _token('null')
-    // 数学运算符
+    // 数学运算符 (单字符 — 必须在复合运算符之后定义)
     , _token('+')
     , _token('-')
     , _token('*')
@@ -76,8 +76,7 @@ export default [
     , _token('!')
     , _token('&&')
     , _token('||')
-    // 赋值运算符
-    , _token('=')
+    // 赋值运算符 (复合运算符必须在单字符运算符之前)
     , _token('+=')
     , _token('-=')
     , _token('*=')

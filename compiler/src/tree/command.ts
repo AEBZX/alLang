@@ -181,7 +181,7 @@ class super_tree extends call_tree {
     }
 }
 
-// vm 指令
+// vm 指令 — allang 上层通过 vm 'xxx' 内联调用 IO
 class vm_tree extends command_tree {
     value: string
     variable: boolean

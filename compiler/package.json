@@ -1,20 +1,36 @@
 {
-  "name": "allang-compiler-core",
-  "version": "0.0.1",
-  "description": "",
-  "main": "index.js",
+  "name": "allang",
+  "version": "0.1.0",
+  "description": "alLang — 现代编程语言编译器和运行时",
+  "main": "dist/cli.js",
+  "bin": {
+    "allang": "./bin/allang.js"
+  },
   "scripts": {
     "build": "tsc",
-    "test": "node.exe --import file:/D:/Program%20Files/JetBrains/WebStorm%202025.1.4.1/plugins/nodeJS/js/ts-file-loader/node_modules/tsx/dist/loader.cjs E:\\alLang\\compiler\\src\\test.ts"
+    "prepare": "tsc",
+    "test": "npx tsx src/test_check.ts",
+    "prepublishOnly": "tsc"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["language", "compiler", "programming-language", "allang"],
+  "author": "白子煦",
   "license": "MIT",
   "type": "module",
+  "files": [
+    "dist/",
+    "base/",
+    "vm-exec/",
+    "README.md"
+  ],
   "dependencies": {
-    "allang-compiler-base": "^0.0.20"
+    "allang-compiler-base": "^0.0.20",
+    "tsx": "^4.19.0"
   },
   "devDependencies": {
-    "@types/node": "^25.5.2"
+    "@types/node": "^25.5.2",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

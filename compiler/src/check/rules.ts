@@ -21,7 +21,7 @@ import {
     boolean_get_tree, null_get_tree
 } from '../tree'
 import {basic_type_tree, array_type_tree, class_type_tree, type_tree} from '../tree'
-import {basic_type} from '../model'
+import {basic_type, pointer_type} from '../model'
 
 export class CheckResult {
     errors: string[]
@@ -55,10 +55,13 @@ export class CheckResult {
 export class Validator {
     root: Scope
     result: CheckResult
+    // 跟踪当前作用域中被 delete 的变量名
+    deletedVars: Map<number, Set<string>>
 
     constructor(root: Scope) {
         this.root = root
         this.result = new CheckResult()
+        this.deletedVars = new Map()
     }
 
     validate(): CheckResult {
@@ -81,6 +84,9 @@ export class Validator {
         this.checkNesting(scope)
         this.checkClassImplements(scope)
         this.checkInterfaceOf(scope)
+        this.checkConstructorVoid(scope)
+        this.checkFileTopLevel(scope, fileScope)
+        this.checkAccessModifiersInScope(scope)
         this.checkCommands(scope, fileScope)
         for (const child of scope.children) {
             this.validateScope(child, fileScope)
@@ -88,18 +94,27 @@ export class Validator {
     }
 
     // ========== 1. 修饰符检查 ==========
+    // async/sync 仅对函数有效，非函数默认 sync
+    // static/unstatic 仅对函数有效（modifiers 默认值使静态检查不可靠，跳过）
 
     checkModifiers(scope: Scope) {
         const node = scope.node
         if (!node || !(node instanceof space_tree)) return
         if (node instanceof module_tree) return
-        if (node instanceof func_tree) return
 
         const mod = node.modifiers
         if (!mod) return
 
-        if (mod.async === true && mod.sync === false) {
-            this.result.warn(`${scope.kind} '${scope.name}' 不应使用 async 修饰符`)
+        const isFunc = node instanceof func_tree
+
+        // async/sync 仅对函数有效
+        if (!isFunc) {
+            if (mod.async === true) {
+                this.result.warn(`${scope.kind} '${scope.name}' 不应使用 async 修饰符，仅函数支持 async/sync`)
+            }
+            if (mod.sync === false) {
+                this.result.warn(`${scope.kind} '${scope.name}' 不应设置 sync=false，仅函数支持 async/sync`)
+            }
         }
     }
 
@@ -205,8 +220,40 @@ export class Validator {
                 if (child.kind === 'interface' && child.name === name) {
                     return child
                 }
+                // 穿透 file scope 搜索跨文件声明的接口
+                if (child.kind === 'file') {
+                    const found = this.searchInFileScope(name, child)
+                    if (found) return found
+                }
             }
             s = s.parent
+        }
+        return null
+    }
+
+    searchInFileScope(name: string, fileScope: Scope): Scope | null {
+        for (const child of fileScope.children) {
+            if (child.kind === 'interface' && child.name === name) {
+                return child
+            }
+            // 也搜索嵌套的模块
+            if (child.kind === 'module') {
+                const found = this.searchInModuleScope(name, child)
+                if (found) return found
+            }
+        }
+        return null
+    }
+
+    searchInModuleScope(name: string, modScope: Scope): Scope | null {
+        for (const child of modScope.children) {
+            if (child.kind === 'interface' && child.name === name) {
+                return child
+            }
+            if (child.kind === 'module') {
+                const found = this.searchInModuleScope(name, child)
+                if (found) return found
+            }
         }
         return null
     }
@@ -241,14 +288,127 @@ export class Validator {
         }
     }
 
-    // ========== 6. 命令规则 ==========
+    // ========== 6. 文件顶层必须是模块 ==========
+
+    checkFileTopLevel(scope: Scope, _fileScope: Scope) {
+        // 只对 file scope 的直接子节点检查
+        if (scope.kind !== 'file') return
+        for (const child of scope.children) {
+            // 文件顶层只允许 module（以及 import 收集后产生的声明）
+            if (child.kind !== 'module') {
+                this.result.error(
+                    `文件顶层只能是 module，不能直接定义 '${child.name}' (${child.kind})，` +
+                    `非 module 块必须嵌套在 module 或其他块内部`
+                )
+            }
+        }
+    }
+
+    // ========== 7. 构造函数必须为 void ==========
+
+    checkConstructorVoid(scope: Scope) {
+        const node = scope.node
+        if (!(node instanceof class_tree)) return
+        for (const [name, decls] of scope.declarations) {
+            if (name !== scope.name) continue
+            for (const d of decls) {
+                if (d.kind !== 'function') continue
+                const funcNode = d.node as func_tree
+                if (funcNode.return_type instanceof basic_type_tree &&
+                    funcNode.return_type.type_name !== basic_type.void_) {
+                    this.result.error(
+                        `类 '${scope.name}' 的同名函数（构造函数）必须为 void 返回类型`
+                    )
+                }
+            }
+        }
+    }
+
+    // ========== 8. 函数返回值检查 ==========
+
+    checkFunctionReturn(func: func_tree, funcScope: Scope) {
+        if (func.return_type instanceof basic_type_tree &&
+            func.return_type.type_name === basic_type.void_) return // void 函数无所谓
+
+        if (!func.commands || func.commands.length === 0) {
+            this.result.warn(`非 void 函数 '${func.name}' 没有返回值`)
+            return
+        }
+
+        // 检查是否有 return 语句
+        const hasReturn = this.hasReturnStatement(func.commands)
+        if (!hasReturn) {
+            this.result.warn(`非 void 函数 '${func.name}' 可能没有返回值`)
+        }
+    }
+
+    hasReturnStatement(commands: command_tree[]): boolean {
+        for (const cmd of commands) {
+            if (cmd instanceof return_tree) return true
+            if (cmd instanceof if_tree) {
+                const inBody = cmd.commands ? this.hasReturnStatement(cmd.commands) : false
+                const inElse = cmd.else ? this.hasReturnStatement(cmd.else) : false
+                // 如果所有分支都有 return，这个 if 就有 return
+                if (inBody && inElse) return true
+                // 否则继续检查
+                if (inBody || inElse) continue
+            }
+            if (cmd.commands && this.hasReturnStatement(cmd.commands)) return true
+        }
+        return false
+    }
+
+    // ========== 9. 变量存在性检查 ==========
+
+    checkVariableExists(name: string, scope: Scope): boolean {
+        if (name === 'up') return true // up 是关键字
+        if (name === 'this' || name === 'self') return true
+        const found = scope.lookupRecursive(name)
+        if (found.length === 0) {
+            this.result.error(`不能访问不存在的变量 '${name}'`)
+            return false
+        }
+        return true
+    }
+
+    // ========== 10. up.xxx 作用域链验证 ==========
+
+    checkUpChain(chain: chain_get_tree, scope: Scope) {
+        let upCount = 0
+        let currentScope = scope
+
+        for (const elem of chain.chain) {
+            if (elem instanceof variable_get_tree && elem.name === 'up') {
+                upCount++
+                if (currentScope.parent) {
+                    currentScope = currentScope.parent
+                } else {
+                    this.result.error(`up 访问越界，没有足够的父作用域层级`)
+                    return
+                }
+            } else if (elem instanceof variable_get_tree) {
+                // 在 up 之后查找变量
+                if (upCount > 0) {
+                    const found = currentScope.lookup(elem.name)
+                    if (found.length === 0) {
+                        this.result.error(`在父作用域中找不到变量 '${elem.name}'`)
+                    }
+                }
+            }
+        }
+    }
+
+    // ========== 11. 命令规则 ==========
 
     checkCommands(scope: Scope, fileScope: Scope) {
         const node = scope.node
         if (!node) return
 
         if (node instanceof func_tree && node.commands) {
+            this.checkFunctionReturn(node, scope)
             this.walkCommands(node.commands, scope, scope, fileScope, false)
+        } else if (node instanceof func_tree) {
+            this.checkFunctionReturn(node, scope)
         } else if (node instanceof block_tree && node.commands) {
             this.walkCommands(node.commands, scope, scope, fileScope, false)
         } else if (node instanceof if_tree && node.commands) {
@@ -293,6 +453,18 @@ export class Validator {
                 cmd.value) {
                 this.result.warn(`void 函数 '${funcScope.name}' 不应返回值，应使用 'return;'`)
             }
+            // 检查非 void 函数的返回值类型匹配
+            if (funcScope.return_type instanceof basic_type_tree &&
+                funcScope.return_type.type_name !== basic_type.void_ &&
+                cmd.value) {
+                this.checkReturnTypeMatch(cmd, funcScope, scope)
+            }
+            // 非 void 函数无返回值
+            if (funcScope.return_type instanceof basic_type_tree &&
+                funcScope.return_type.type_name !== basic_type.void_ &&
+                !cmd.value) {
+                this.result.warn(`非 void 函数 '${funcScope.name}' 的 return 语句没有返回值`)
+            }
         }
 
         // 检查 var 的 any 类型
@@ -303,7 +475,27 @@ export class Validator {
             }
         }
 
-        // 检查作用域访问
+        // 检查 foreach — 仅可用于 map/array
+        if (cmd instanceof foreach_tree) {
+            this.checkForeachTarget(cmd, scope)
+        }
+
+        // 检查 for — condition lambda 必须返回 boolean
+        if (cmd instanceof for_tree) {
+            this.checkForCondition(cmd, scope)
+        }
+
+        // 检查函数调用参数
+        if (cmd instanceof call_tree) {
+            this.checkFunctionCallArgs(cmd, scope)
+        }
+
+        // 检查 delete — 标记被删除的变量
+        if (cmd instanceof delete_tree) {
+            this.trackDeletedVar(cmd, scope)
+        }
+
+        // 检查作用域访问（含指针操作、delete 后访问）
         this.checkScopeAccess(cmd, scope)
 
         // === 递归遍历子命令，传递正确的 inLoop 标志 ===
@@ -330,11 +522,6 @@ export class Validator {
         // while — body 是循环内
         if (cmd instanceof while_tree && cmd.commands) {
             this.walkCommands(cmd.commands, scope, funcScope, fileScope, true)
-        }
-
-        // do-while — body 是循环内
-        if (cmd.commands && cmd instanceof while_tree) {
-            // 上面的条件已经处理了
         }
 
         // for — body 是循环内
@@ -373,25 +560,27 @@ export class Validator {
         }
     }
 
-    // ========== 7. 作用域访问检查 ==========
+    // ========== 12. 作用域访问检查 ==========
 
     checkScopeAccess(cmd: command_tree, scope: Scope) {
         this.walkCmdExpressions(cmd, (get) => {
             if (get instanceof variable_get_tree) {
                 const name = get.name
-                if (name === 'up') return
-                // 查找变量声明
-                const found = scope.lookupRecursive(name)
-                // 如果找不到，可能是全局/跨模块引用，暂不报错
+                if (name === 'up' || name === 'this' || name === 'self') return
+                // 检查 delete 后访问
+                this.checkDeletedAccess(name, scope)
             } else if (get instanceof chain_get_tree) {
                 this.checkChainAccess(get, scope)
+            } else if (get instanceof pointer_get_tree) {
+                this.checkPointerOperType(get, scope)
             }
         })
     }
 
     checkChainAccess(chain: chain_get_tree, scope: Scope) {
         let currentScope = scope
-        for (const elem of chain.chain) {
+        for (let i = 0; i < chain.chain.length; i++) {
+            const elem = chain.chain[i]
             if (elem instanceof variable_get_tree) {
                 if (elem.name === 'up') {
                     if (currentScope.parent) {
@@ -402,6 +591,12 @@ export class Validator {
                     }
                     continue
                 }
+                // 检查变量是否存在
+                this.checkVariableExists(elem.name, currentScope)
+                // 检查 delete 后访问
+                this.checkDeletedAccess(elem.name, currentScope)
+                // 检查访问权限
+                this.checkAccessModifier(elem.name, currentScope, scope)
                 const found = currentScope.lookup(elem.name)
                 if (found.length > 0) {
                     if (found[0].kind === 'module' || found[0].kind === 'class') {
@@ -414,9 +609,325 @@ export class Validator {
                         }
                     }
                 }
+            } else if (elem instanceof pointer_get_tree) {
+                this.checkPointerOperType(elem, scope)
+            } else if (elem instanceof array_get_tree) {
+                if (elem.name) this.walkExprNode(elem.name, (g) => {})
+                if (elem.index) this.walkExprNode(elem.index, (g) => {})
             } else {
                 break
             }
+        }
+    }
+
+    // ========== 13. foreach 目标类型检查 ==========
+
+    checkForeachTarget(cmd: foreach_tree, scope: Scope) {
+        if (!cmd.array || !cmd.array.tree) return
+        // 尝试从表达式推断目标类型
+        const targetName = this.getRootVarName(cmd.array.tree)
+        if (!targetName) return
+        const decls = scope.lookupRecursive(targetName)
+        if (decls.length === 0) return
+        const decl = decls[0]
+        // 检查变量类型
+        if (decl.kind === 'var') {
+            const varNode = decl.node as any
+            if (varNode.identifier && varNode.identifier.value) {
+                const tp = varNode.identifier.value
+                const typeOK = tp instanceof array_type_tree ||
+                    (tp instanceof basic_type_tree &&
+                        (tp.type_name === basic_type.map || tp.type_name === basic_type.string))
+                if (!typeOK) {
+                    this.result.error(
+                        `foreach 只能用于 map/array/string 类型，变量 '${targetName}' 类型不匹配`
+                    )
+                }
+            }
+        }
+    }
+
+    getRootVarName(chain: chain_get_tree): string | null {
+        if (!chain || !chain.chain || chain.chain.length === 0) return null
+        const first = chain.chain[0]
+        if (first instanceof variable_get_tree) return first.name
+        if (first instanceof chain_get_tree) return this.getRootVarName(first)
+        return null
+    }
+
+    // ========== 14. 指针类型检查 ==========
+
+    checkPointerOperType(expr: pointer_get_tree, scope: Scope) {
+        if (expr.oper_type === pointer_type.address) {
+            // &a 可以对任何类型，无需额外检查
+            return
+        }
+        if (expr.oper_type === pointer_type.value) {
+            // *a 只能对 number（指针值）
+            if (expr.data instanceof variable_get_tree) {
+                const name = expr.data.name
+                const decls = scope.lookupRecursive(name)
+                if (decls.length > 0 && decls[0].kind === 'var') {
+                    const varNode = decls[0].node as any
+                    if (varNode.identifier && varNode.identifier.value) {
+                        const tp = varNode.identifier.value
+                        if (tp instanceof basic_type_tree && tp.type_name !== basic_type.number) {
+                            this.result.error(`寻址操作 * 只能对 number 类型，变量 '${name}' 类型不匹配`)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ========== 15. for 循环 condition lambda 返回类型检查 ==========
+
+    checkForCondition(cmd: for_tree, _scope: Scope) {
+        if (!cmd.condition) {
+            this.result.error(`for 循环必须有 condition lambda`)
+            return
+        }
+        // condition 是 lambda_get_tree，检查其返回类型
+        if (cmd.condition instanceof lambda_get_tree) {
+            // lambda 的返回类型存储在 param.return 或类似字段
+            // 检查返回类型是否为 boolean
+            const lambdaNode = cmd.condition as any
+            if (lambdaNode.return_type) {
+                const rt = lambdaNode.return_type
+                if (rt instanceof basic_type_tree && rt.type_name !== basic_type.boolean) {
+                    this.result.error(
+                        `for 循环的 condition lambda 必须返回 boolean，当前返回 ${basic_type[rt.type_name]}`
+                    )
+                }
+            }
+        }
+    }
+
+    // ========== 16. 函数调用参数检查 ==========
+
+    checkFunctionCallArgs(cmd: call_tree, scope: Scope) {
+        const name = cmd.name
+        if (!name) return
+        // 查找函数声明
+        const decls = scope.lookupRecursive(name)
+        if (decls.length === 0) return
+        // 过滤出函数声明
+        const funcDecls = decls.filter(d => d.kind === 'function')
+        if (funcDecls.length === 0) return
+
+        const callArgCount = cmd.param && cmd.param.args ? cmd.param.args.length : 0
+
+        let bestMatch: DeclEntry | null = null
+        for (const d of funcDecls) {
+            const funcNode = d.node as func_tree
+            const declParamCount = funcNode.params && funcNode.params.param
+                ? funcNode.params.param.length : 0
+            if (declParamCount === callArgCount) {
+                bestMatch = d
+                break
+            }
+            if (bestMatch === null) {
+                bestMatch = d // fallback
+            }
+        }
+
+        if (bestMatch) {
+            const funcNode = bestMatch.node as func_tree
+            const declParamCount = funcNode.params && funcNode.params.param
+                ? funcNode.params.param.length : 0
+            if (declParamCount !== callArgCount) {
+                this.result.error(
+                    `函数 '${name}' 需要 ${declParamCount} 个参数，但调用时传入了 ${callArgCount} 个`
+                )
+            }
+        }
+    }
+
+    // ========== 17. 返回值类型匹配检查 ==========
+
+    checkReturnTypeMatch(cmd: return_tree, funcScope: Scope, scope: Scope) {
+        if (!cmd.value || !cmd.value.tree) return
+        const returnType = funcScope.return_type
+        if (!returnType || !(returnType instanceof basic_type_tree)) return
+
+        const expected = returnType.type_name
+
+        // 尝试推断返回值类型
+        const actual = this.inferExpressionType(cmd.value.tree, scope)
+        if (actual === null || actual === undefined) return
+
+        if (actual !== expected) {
+            // null 可以返回给任何类型
+            if (actual === -1) {
+                return
+            }
+            this.result.error(
+                `函数 '${funcScope.name}' 返回类型应为 ${basic_type[expected]}，` +
+                `但实际返回 ${basic_type[actual] || actual}`
+            )
+        }
+    }
+
+    inferExpressionType(chain: chain_get_tree, scope: Scope): number | null {
+        if (!chain || !chain.chain || chain.chain.length === 0) return null
+        const last = chain.chain[chain.chain.length - 1]
+
+        // 直接量类型
+        if (last instanceof number_get_tree) return basic_type.number
+        if (last instanceof string_get_tree) return basic_type.string
+        if (last instanceof boolean_get_tree) return basic_type.boolean
+        if (last instanceof null_get_tree) return -1 // null 类型用 -1 表示
+
+        // 变量类型
+        if (last instanceof variable_get_tree) {
+            const decls = scope.lookupRecursive(last.name)
+            if (decls.length > 0) {
+                const d = decls[0]
+                if (d.kind === 'var') {
+                    const varNode = d.node as any
+                    if (varNode.identifier && varNode.identifier.value) {
+                        const tp = varNode.identifier.value
+                        if (tp instanceof basic_type_tree) return tp.type_name
+                    }
+                }
+                if (d.kind === 'const') {
+                    const constNode = d.node as any
+                    if (constNode.const_type && constNode.const_type instanceof basic_type_tree)
+                        return constNode.const_type.type_name
+                }
+            }
+        }
+
+        // 运算结果推断 — + 可能是数字或字符串，保守返回 null
+        if (last instanceof math_oper_get_tree) return null
+        if (last instanceof bool_oper_get_tree) return basic_type.boolean
+        if (last instanceof pointer_get_tree) {
+            if (last.oper_type === pointer_type.value) return basic_type.number
+        }
+
+        // new 表达式返回 map
+        if (last instanceof new_get_tree) return basic_type.map
+
+        // 函数调用结果
+        if (last instanceof call_get_expr) {
+            const callName = this.getRootVarNameFromExpr(last.name?.tree)
+            if (callName) {
+                const decls = scope.lookupRecursive(callName)
+                for (const d of decls) {
+                    if (d.kind === 'function') {
+                        const fn = d.node as func_tree
+                        if (fn.return_type instanceof basic_type_tree)
+                            return fn.return_type.type_name
+                    }
+                }
+            }
+        }
+
+        // 三元表达式
+        if (last instanceof ternary_get_tree) {
+            const t = this.inferExpressionType(last.true_value?.tree, scope)
+            const f = this.inferExpressionType(last.false_value?.tree, scope)
+            return t || f || null
+        }
+
+        return null
+    }
+
+    getRootVarNameFromExpr(chain: chain_get_tree | null): string | null {
+        if (!chain || !chain.chain || chain.chain.length === 0) return null
+        const first = chain.chain[0]
+        if (first instanceof variable_get_tree) return first.name
+        return null
+    }
+
+    // ========== 18. delete 变量跟踪 ==========
+
+    trackDeletedVar(cmd: delete_tree, scope: Scope) {
+        const name = cmd.name
+        if (!name) return
+        // 使用 scope 的某种标识作为 key (简化：用 scope 层级+名称)
+        const key = this.getScopeKey(scope)
+        if (!this.deletedVars.has(key)) {
+            this.deletedVars.set(key, new Set())
+        }
+        this.deletedVars.get(key)!.add(name)
+    }
+
+    checkDeletedAccess(name: string, scope: Scope) {
+        // 检查当前作用域及所有祖先作用域中被 delete 的变量
+        let s: Scope | null = scope
+        while (s) {
+            const key = this.getScopeKey(s)
+            const deleted = this.deletedVars.get(key)
+            if (deleted && deleted.has(name)) {
+                this.result.error(
+                    `变量 '${name}' 已被 delete，不可再访问`
+                )
+                return
+            }
+            s = s.parent
+        }
+    }
+
+    getScopeKey(scope: Scope): number {
+        // 用 scope 节点身份作为 key
+        let key = 0
+        let s: Scope | null = scope
+        while (s) {
+            // 简单哈希：用层级深度 + 名字/kind
+            key = key * 31 + (s.name ? s.name.length : 0) + (s.kind ? s.kind.length : 0)
+            s = s.parent
+        }
+        return key
+    }
+
+    // ========== 19. 访问权限检查 ==========
+
+    checkAccessModifiersInScope(scope: Scope) {
+        // 对每个 class 作用域，检查私有成员的访问
+        if (scope.kind !== 'class') return
+        // 收集所有 private 声明
+        const privates = new Set<string>()
+        for (const [name, decls] of scope.declarations) {
+            for (const d of decls) {
+                const node = d.node
+                if (node instanceof space_tree && node.modifiers && node.modifiers.private) {
+                    privates.add(name)
+                }
+            }
+        }
+        // 将私有成员信息附加到 scope（供后续检查使用）
+        ;(scope as any).__privates = privates
+    }
+
+    checkAccessModifier(name: string, currentScope: Scope, accessScope: Scope) {
+        // 如果访问的变量在 class 作用域中声明为 private，检查是否在同类内部访问
+        let s: Scope | null = accessScope
+        while (s) {
+            if (s.kind === 'class' || s.kind === 'module') {
+                const decls = s.lookup(name)
+                if (decls.length > 0) {
+                    for (const d of decls) {
+                        const node = d.node
+                        if (node instanceof space_tree && node.modifiers && node.modifiers.private) {
+                            // 检查当前访问是否在同一个 class 内
+                            let cs: Scope | null = currentScope
+                            let sameClass = false
+                            while (cs) {
+                                if (cs === s) { sameClass = true; break }
+                                cs = cs.parent
+                            }
+                            if (!sameClass) {
+                                this.result.error(
+                                    `不能从外部访问 private 成员 '${name}'（声明在 ${s.kind} '${s.name}' 中）`
+                                )
+                            }
+                        }
+                    }
+                }
+                break
+            }
+            s = s.parent
         }
     }
 

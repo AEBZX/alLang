@@ -253,10 +253,22 @@ function parseVarCmd(ts: TokenStream): identifier_var_tree {
 // 赋值或调用 (由标识符开始)
 function parseAssignOrCall(ts: TokenStream): command_tree {
     const pos = ts.save()
-    const name = expectType(ts, token_type.identifier)
+    let name = expectType(ts, token_type.identifier)
     if (!name) {
         ts.restore(pos)
         return null
+    }
+
+    // 处理链式调用: a.b.c(params)
+    let fullName = name.name
+    while (ts.now() && ts.now().name === '.') {
+        ts.next() // consume '.'
+        const nextName = expectType(ts, token_type.identifier)
+        if (!nextName) {
+            ts.restore(pos)
+            return null
+        }
+        fullName += '.' + nextName.name
     }
 
     const t = ts.now()
@@ -272,7 +284,7 @@ function parseAssignOrCall(ts: TokenStream): command_tree {
             ts.restore(pos)
             return null
         }
-        return new call_tree(name.name, params, false)
+        return new call_tree(fullName, params, false)
     }
 
     // 复合赋值: name += value;
@@ -296,7 +308,7 @@ function parseAssignOrCall(ts: TokenStream): command_tree {
             ts.restore(pos)
             return null
         }
-        return new math_set_tree(name.name, value, compound_ops[t.name])
+        return new math_set_tree(fullName, value, compound_ops[t.name])
     }
 
     // 普通赋值: name = value;
@@ -307,7 +319,7 @@ function parseAssignOrCall(ts: TokenStream): command_tree {
             ts.restore(pos)
             return null
         }
-        return new set_tree(name.name, value)
+        return new set_tree(fullName, value)
     }
 
     // ++ / --
@@ -318,7 +330,7 @@ function parseAssignOrCall(ts: TokenStream): command_tree {
             return null
         }
         const oper = t.name === '++' ? math_oper_type.add : math_oper_type.sub
-        return new math_set_tree(name.name,
+        return new math_set_tree(fullName,
             get_node_tree.create([new number_get_tree(1)]), oper)
     }
 
@@ -339,6 +351,19 @@ function parseCallCmd(ts: TokenStream): call_tree {
         ts.restore(pos)
         return null
     }
+
+    // 处理链式调用: await a.b.c(params)
+    let fullName = name.name
+    while (ts.now() && ts.now().name === '.') {
+        ts.next()
+        const nextName = expectType(ts, token_type.identifier)
+        if (!nextName) {
+            ts.restore(pos)
+            return null
+        }
+        fullName += '.' + nextName.name
+    }
+
     const params = parseParamCall(ts)
     if (!params) {
         ts.restore(pos)
@@ -348,7 +373,7 @@ function parseCallCmd(ts: TokenStream): call_tree {
         ts.restore(pos)
         return null
     }
-    return new call_tree(name.name, params, _await)
+    return new call_tree(fullName, params, _await)
 }
 
 // if condition { commands } else if condition { commands } else { commands }
@@ -823,8 +848,6 @@ function parseClassBody(
     // 默认填充修饰符
     cls.modifiers.async = false
     cls.modifiers.sync = true
-    cls.modifiers.static = true
-    cls.modifiers.unstatic = false
     return cls
 }
 
@@ -978,8 +1001,6 @@ function parseVarBody(
     }
     mod.async = false
     mod.sync = true
-    mod.static = true
-    mod.unstatic = false
     return new var_tree(name, tp, mod, annotations, value)
 }
 

@@ -10,3 +10,8 @@ vm/main.exe
 parser.md
 base/.npmrc
 check.md
+*.md
+desugar.md
+create.md
+vm.md
+cli.md
