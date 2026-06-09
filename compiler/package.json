@@ -9,10 +9,15 @@
   "scripts": {
     "build": "tsc",
     "prepare": "tsc",
-    "test": "npx tsx src/test_check.ts",
+    "test": "vitest",
     "prepublishOnly": "tsc"
   },
-  "keywords": ["language", "compiler", "programming-language", "allang"],
+  "keywords": [
+    "language",
+    "compiler",
+    "programming-language",
+    "allang"
+  ],
   "author": "白子煦",
   "license": "MIT",
   "type": "module",
@@ -24,7 +29,8 @@
   ],
   "dependencies": {
     "allang-compiler-base": "^0.0.20",
-    "tsx": "^4.19.0"
+    "tsx": "^4.19.0",
+    "vitest": "^4.1.8"
   },
   "devDependencies": {
     "@types/node": "^25.5.2",
