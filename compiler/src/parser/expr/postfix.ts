@@ -18,7 +18,10 @@ export function args_expr(tool:TokenStream){
         ret.push(expr(tool))
         if(ret[ret.length-1]==null)allang_log.error('缺少表达式',tool.now().line)
     }
-    if(tool.now().name==')')return ret
+    if(tool.now().name==')'){
+        tool.next()
+        return ret
+    }
     allang_log.error('缺少结束符',tool.now().line)
 }
 export default function (tool:TokenStream){
@@ -27,6 +30,7 @@ export default function (tool:TokenStream){
     while(true){
         if(!tool.hasMore())return ret
         if(tool.now().name=='.'){
+            tool.next()
             ret=new ExprMemberTree(ret,tool.next().name)
         }else if(tool.now().name=='['){
             tool.next()
@@ -35,8 +39,8 @@ export default function (tool:TokenStream){
             ret=new ExprComputedTree(ret,exp)
             if(!tool.hasMore())return null
             if(tool.now().name!=']')allang_log.error('缺少]',tool.now().line)
-        }else if(tool.now().name=='('){
             tool.next()
+        }else if(tool.now().name=='('){
             ret=new ExprCallTree(ret,args_expr(tool))
         }else if(tool.now().name=='++') {
             tool.next()

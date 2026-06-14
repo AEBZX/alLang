@@ -29,7 +29,8 @@ export function if_expr(tool:TokenStream){
         if(call[0]==null)allang_log.error('缺少命令',tool.now().line)
     }else call=commands_expr(tool)
     let else_call:CommandTree[]=[]
-    if(tool.now().name!='else')return new IfTree(cond,call,else_call)
+    if(tool.hasMore()&&tool.now().name==';')tool.next()
+    if(!tool.hasMore()||tool.now().name!='else')return new IfTree(cond,call,else_call)
     tool.next()
     if(tool.now().name!='{'){
         else_call[0]=command_expr(tool)
@@ -81,6 +82,8 @@ export function for_expr(tool:TokenStream){
             break
         }
     }
+    if(tool.now().name!=';')allang_log.error('缺少分号',tool.now().line)
+    tool.next()
     cond=expr(tool)
     if(cond==null)allang_log.error('缺少条件',tool.now().line)
     if(tool.now().name!=';')allang_log.error('缺少分号',tool.now().line)
@@ -155,6 +158,7 @@ export function switch_expr(tool:TokenStream){
     let exp=theses_expr(tool)
     if(exp==null)allang_log.error('缺少表达式',tool.now().line)
     if(tool.now().name!='{')allang_log.error('缺少开始',tool.now().line)
+    tool.next()
     let _case=[]
     let default_call:CommandTree[]=[]
     while(true){
@@ -165,6 +169,8 @@ export function switch_expr(tool:TokenStream){
             break
         }
     }
+    if(tool.now().name!='}')allang_log.error('缺少结束符',tool.now().line)
+    tool.next()
     return new SwitchTree(exp,_case,default_call)
 }
 export function try_expr(tool:TokenStream){
@@ -173,17 +179,19 @@ export function try_expr(tool:TokenStream){
     tool.next()
     let _try:CommandTree[]=[]
     if(tool.now().name!='{'){
-        _try=commands_expr(tool)
-        if(_try==null)allang_log.error('缺少命令',tool.now().line)
+        _try[0]=command_expr(tool)
+        if(_try[0]==null)allang_log.error('缺少命令',tool.now().line)
     }else _try=commands_expr(tool)
+    if(tool.now().name!='catch')allang_log.error('缺少catch关键字',tool.now().line)
+    tool.next()
     let _catch:ExprLambdaTree=lambda_expr(tool)
     if(_catch==null)allang_log.error('缺少异常处理',tool.now().line)
     let _finally:CommandTree[]=[]
-    if(tool.now().name=='finally'){
+    if(tool.hasMore()&&tool.now().name=='finally'){
         tool.next()
         if(tool.now().name!='{'){
-            _finally=commands_expr(tool)
-            if(_finally==null)allang_log.error('缺少命令',tool.now().line)
+            _finally[0]=command_expr(tool)
+            if(_finally[0]==null)allang_log.error('缺少命令',tool.now().line)
         }else _finally=commands_expr(tool)
     }
     return new TryTree(_try,_catch,_finally)

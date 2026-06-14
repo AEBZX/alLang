@@ -23,5 +23,6 @@ export function commands_expr(tool:TokenStream){
         }
     }
     if(tool.now().name!=';')allang_log.error('缺少分号',tool.now().line)
+    tool.next()
     return a
 }

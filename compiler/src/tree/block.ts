@@ -35,3 +35,8 @@ export class ImportTree extends Tree{
         super()
     }
 }
+export class FileTree extends Tree{
+    constructor(public imports:ImportTree[],public block:BlockTree[]){
+        super()
+    }
+}

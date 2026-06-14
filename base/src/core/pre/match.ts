@@ -78,8 +78,10 @@ function match_number(code:string[], start:number):{i:number,v:string,o:boolean}
     if(code[i]=='0'){
         o=true
         v+='0'
-        if(!code[i+1])
+        if(!code[i+1]){
+            i++
             v='0'
+        }
         else if(code[i+1]=='x'||code[i+1]=='X'){
             v+='x'
             i+=2
@@ -94,7 +96,7 @@ function match_number(code:string[], start:number):{i:number,v:string,o:boolean}
                 i++
             }
             //负号检查
-            if(ls-1>=0&&code[ls-1]=='-'){
+            if(ls-1>=0&&code[ls-1]=='-'&&code[ls]==' '){
                 v='-'+v
             }
         }else if(code[i+1]=='b'||code[i+1]=='B'){
@@ -110,7 +112,7 @@ function match_number(code:string[], start:number):{i:number,v:string,o:boolean}
                 v+=code[i]
                 i++
             }
-            if(ls-1>=0&&code[ls-1]=='-'){
+            if(ls-1>=0&&code[ls-1]=='-'&&code[ls]==' '){
                 v='-'+v
             }
         }else if(code[i+1]=='o'||code[i+1]=='O'){
@@ -126,7 +128,7 @@ function match_number(code:string[], start:number):{i:number,v:string,o:boolean}
                 v+=code[i]
                 i++
             }
-            if(ls-1>=0&&code[ls-1]=='-'){
+            if(ls-1>=0&&code[ls-1]=='-'&&code[ls]==' '){
                 v='-'+v
             }
         }else{
@@ -155,7 +157,7 @@ function match_number(code:string[], start:number):{i:number,v:string,o:boolean}
                         i++
                     }
                 }
-                if(ls-1>=0&&code[ls-1]=='-'){
+                if(ls-1>=0&&code[ls-1]=='-'&&code[ls]==' '){
                     v='-'+v
                 }
             }
@@ -180,7 +182,7 @@ function match_number(code:string[], start:number):{i:number,v:string,o:boolean}
             v+=code[i]
             i++
         }
-        if(ls-1>=0&&code[ls-1]=='-'){
+        if(ls-1>=0&&code[ls-1]=='-'&&code[ls]==' '){
             v='-'+v
         }
     }

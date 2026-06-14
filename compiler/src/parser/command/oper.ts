@@ -20,9 +20,20 @@ import {var_expr} from '../iden'
 import {DecrementTree, IncrementTree} from "../../tree/command";
 
 export function _set_expr(tool:TokenStream,token:string,_exp:any){
+    let save=tool.save()
     let expr1=expr(tool)
-    if(expr1==null)return null
-    if(tool.now().name!=token)return expr1
+    if(expr1==null){
+        tool.restore(save)
+        return null
+    }
+    if(!tool.hasMore()){
+        tool.restore(save)
+        return null
+    }
+    if(tool.now().name!=token){
+        tool.restore(save)
+        return null
+    }
     tool.next()
     let expr2=expr(tool)
     if(expr2==null)allang_log.error('缺少表达式',tool.now().line)
@@ -58,7 +69,6 @@ export function var_command_expr(tool:TokenStream){
     let iden=var_expr(tool)
     if(iden==null)allang_log.error('缺少变量',tool.now().line)
     if(tool.now().name==';'){
-        tool.next()
         return new VarTree(iden,null)
     }
     if(tool.now().name!='=')allang_log.error('缺少赋值符',tool.now().line)
@@ -102,21 +112,33 @@ export function _t_expr(tool:TokenStream,token:string,_exp:any){
 }
 export function _post_expr(tool:TokenStream,token:string,_exp:any){
     if(!tool.hasMore())return null
+    let save=tool.save()
     let a=expr(tool)
-    if(a==null)return null
-    if(tool.now().name==token)return new _exp(a)
+    if(a==null){
+        tool.restore(save)
+        return null
+    }
+    if(!tool.hasMore()){
+        tool.restore(save)
+        return null
+    }
+    if(tool.now().name==token){
+        tool.next()
+        return new _exp(a)
+    }
+    tool.restore(save)
     return null
 }
 export default function (tool:TokenStream){
     return set_expr(tool)
         || var_command_expr(tool)
         || vm_expr(tool)
-        || call_expr(tool)
         || _t_expr(tool,'return',ReturnTree)
         || _t_expr(tool,'delete',DeleteTree)
-        || _t_expr(tool,'break',ThrowTree)
+        || _t_expr(tool,'throw',ThrowTree)
         || _name_expr(tool,'continue',ContinueTree)
         || _name_expr(tool,'break',BreakTree)
         || _post_expr(tool,'++',IncrementTree)
         || _post_expr(tool,'--',DecrementTree)
+        || call_expr(tool)
 }

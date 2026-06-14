@@ -9,7 +9,7 @@
   "scripts": {
     "build": "tsc",
     "prepare": "tsc",
-    "test": "vitest",
+    "test": "vitest run",
     "prepublishOnly": "tsc"
   },
   "keywords": [
@@ -28,7 +28,7 @@
     "README.md"
   ],
   "dependencies": {
-    "allang-compiler-base": "^0.0.20",
+    "allang-compiler-base": "^0.0.21",
     "tsx": "^4.19.0",
     "vitest": "^4.1.8"
   },
