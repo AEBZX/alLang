@@ -69,7 +69,7 @@ export class ExprCallTree extends ExprPostfixTree{
         super()
     }
 }
-export class ExprPrefixTree extends ExprPostfixTree{}
+export class ExprPrefixTree extends ExprTree{}
 export class ExprNegTree extends ExprPrefixTree{
     constructor(public object:ExprTree){
         super()

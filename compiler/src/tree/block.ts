@@ -21,7 +21,7 @@ export class InterfaceTree extends Tree{
     }
 }
 export class FunctionTree extends Tree{
-    constructor(public name:string,public child:CommandTree[],public modifier:modifier,public args:ParamIdenTree[]){
+    constructor(public name:string,public child:CommandTree[],public modifier:modifier,public args:ParamIdenTree){
         super()
     }
 }

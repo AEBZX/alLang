@@ -2,45 +2,33 @@ import {token_type, TokenStream} from 'allang-compiler-base'
 import {
     ExprArrayTree,
     ExprBooleanTree,
-    ExprIdenTree,
+    ExprIdenTree, ExprLambdaTree,
     ExprNullTree,
     ExprNumberTree,
     ExprStringTree,
-    ExprTree
+    ExprTree, VarIdenTree
 } from '../../tree'
 import {expr} from './index'
 import allang_log from '../../base/allang_log'
+import {param_iden_expr, type_expr, var_expr} from '../iden'
+import {commands_expr} from '../command'
 
-export function string_expr(tool:TokenStream){
+export function _name_expr(tool:TokenStream,name:string,_exp:any){
     if(!tool.hasMore())return null
-    if(tool.now().type==token_type.string)return new ExprStringTree(tool.next().name)
-    return null
-}
-export function number_expr(tool:TokenStream){
-    if(!tool.hasMore())return null
-    if(tool.now().type==token_type.number)return new ExprNumberTree(parseFloat(tool.next().name))
-    return null
-}
-export function boolean_expr(tool:TokenStream){
-    if(!tool.hasMore())return null
-    if(tool.now().type==token_type.keyword&&(tool.now().name=='true'||tool.now().name=='false')){
-        return new ExprBooleanTree(tool.next().name=='true')
-    }
-    return null
-}
-export function null_expr(tool:TokenStream){
-    if(!tool.hasMore())return null
-    if(tool.now().type==token_type.keyword&&tool.now().name=='null'){
+    if(tool.now().name==name){
         tool.next()
-        return new ExprNullTree()
+        return new _exp()
     }
     return null
 }
-export function iden_expr(tool:TokenStream){
+export function _type_expr(tool:TokenStream,type:token_type,_exp:any){
     if(!tool.hasMore())return null
-    if(tool.now().type==token_type.identifier){
-        return new ExprIdenTree(tool.next().name)
-    }
+    if(tool.now().type==type)return new _exp(tool.next().name)
+    return null
+}
+export function _type_filter_expr(tool:TokenStream,type:token_type,_exp:any,param:(a:string)=>any){
+    if(!tool.hasMore())return null
+    if(tool.now().type==type)return new _exp(param(tool.next().name))
     return null
 }
 export function array_expr(tool:TokenStream){
@@ -55,7 +43,7 @@ export function array_expr(tool:TokenStream){
     while(tool.now().name==','){
         tool.next()
         value.push(expr(tool))
-        if(value[value.length-1]==null)return null
+        if(value[value.length-1]==null)allang_log.error('缺少表达式',tool.now().line)
     }
     if(tool.now().name!=']')return null
     return new ExprArrayTree(value)
@@ -69,13 +57,58 @@ export function theses_expr(tool:TokenStream){
     if(tool.now().name!=')')allang_log.error('括号表达式缺少结束符',tool.now().line)
     return ret
 }
-//TODO 暂不实现
-export function map_expr(tool:TokenStream){
+export function _KV_expr(tool:TokenStream){
+    if(!tool.hasMore())return null
+    let a=var_expr(tool)
+    if(a==null)return null
+    if(tool.now().name!='=')allang_log.error('缺少值的定义',tool.now().line)
+    tool.next()
+    let _expr=expr(tool)
+    if(_expr==null)allang_log.error('缺少表达式',tool.now().line)
+    return {name:a,value:_expr}
 }
-//TODO 暂不实现
+export function map_expr(tool:TokenStream){
+    if(!tool.hasMore())return null
+    if(tool.now().name!='{')return null
+    tool.next()
+    if(tool.now().name=='}'){
+        tool.next()
+        return new ExprArrayTree([])
+    }
+    let ret:{name:VarIdenTree,value:ExprTree}[]=[]
+    ret.push(_KV_expr(tool))
+    if(ret[0]==null)allang_log.error('缺少表达式',tool.now().line)
+    while(tool.now().name==','){
+        tool.next()
+        ret.push(_KV_expr(tool))
+        if(ret[ret.length-1]==null)allang_log.error('缺少表达式',tool.now().line)
+    }
+    if(tool.now().name=='}')return ret
+    allang_log.error('缺少结束符',tool.now().line)
+}
 export function lambda_expr(tool:TokenStream){
+    if(!tool.hasMore())return null
+    let param=param_iden_expr( tool)
+    if(param==null)return null
+    if(tool.now().name!=':')allang_log.error('缺少返回类型',tool.now().line)
+    tool.next()
+    let type=type_expr(tool)
+    if(type==null)allang_log.error('缺少返回类型',tool.now().line)
+    if(tool.now().name!='->')allang_log.error('缺少命令体',tool.now().line)
+    tool.next()
+    let command=commands_expr(tool)
+    if(command==null)allang_log.error('缺少命令体',tool.now().line)
+    return new ExprLambdaTree(param,type,command)
 }
 export default function (tool:TokenStream){
-    return string_expr(tool)||number_expr(tool)||boolean_expr(tool)||null_expr(tool)||iden_expr(tool)||array_expr(tool)||
-        map_expr(tool)||theses_expr(tool)||lambda_expr(tool)
+    return _type_expr(tool,token_type.string,ExprStringTree)
+        || _type_expr(tool,token_type.number,ExprNumberTree)
+        || _type_filter_expr(tool,token_type.keyword,ExprBooleanTree,v=>v=='true')
+        || _name_expr(tool,'null',ExprNullTree)
+        || _type_expr(tool,token_type.identifier,ExprIdenTree)
+        || array_expr(tool)
+        || map_expr(tool)
+        || theses_expr(tool)
+        || lambda_expr(tool)
+        || null
 }

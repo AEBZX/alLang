@@ -112,4 +112,5 @@ export default [
     , _token('=>')
     , _token('->')
     , _token('...')
+    , _token('[]')
 ]

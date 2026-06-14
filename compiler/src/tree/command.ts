@@ -1,9 +1,10 @@
 import {Tree} from 'allang-compiler-base'
 import {ExprLambdaTree, ExprTree} from './expr'
 import {VarIdenTree} from './iden'
-export class CommandTree extends Tree{}
+export class CommandTree extends Tree{
+}
 export class ReturnTree extends CommandTree{
-    constructor(public value:Tree){
+    constructor(public value:ExprTree){
         super()
     }
 }
@@ -20,7 +21,7 @@ export class SetTree extends CommandTree{
     }
 }
 export class CallTree extends CommandTree{
-    constructor(public name:ExprTree,public args:ExprTree[],public await:boolean){
+    constructor(public name:ExprTree,public await:boolean){
         super()
     }
 }
@@ -116,6 +117,16 @@ export class ShiftLeftSetTree extends CommandTree{
 }
 export class ShiftRightSetTree extends CommandTree{
     constructor(public name:ExprTree,public value:ExprTree){
+        super()
+    }
+}
+export class IncrementTree extends CommandTree{
+    constructor(public name:ExprTree){
+        super()
+    }
+}
+export class DecrementTree extends CommandTree{
+    constructor(public name:ExprTree){
         super()
     }
 }
