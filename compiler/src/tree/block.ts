@@ -4,30 +4,33 @@ import {ExprTree} from './expr'
 import {Tree} from 'allang-compiler-base'
 import {modifier} from '../base/model'
 export class BlockTree extends Tree{
-}
-export class ModuleTree extends Tree{
-    constructor(public name:string,public child:BlockTree[],public modifier:modifier){
+    constructor(public name:string,public child:BlockTree[],public modifier:modifier) {
         super()
     }
 }
-export class ClassTree extends Tree{
-    constructor(public name:string,public child:BlockTree[],public modifier:modifier,public implement:string){
-        super()
+export class ModuleTree extends BlockTree{
+    constructor(public name:string,child:BlockTree[],modifier:modifier){
+        super(name,child, modifier)
     }
 }
-export class InterfaceTree extends Tree{
-    constructor(public name:string,public child:BlockTree[],public modifier:modifier,public of:string){
-        super()
+export class ClassTree extends BlockTree{
+    constructor(public name:string,child:BlockTree[],modifier:modifier,public implement:string){
+        super(name,child, modifier)
     }
 }
-export class FunctionTree extends Tree{
-    constructor(public name:string,public child:CommandTree[],public modifier:modifier,public args:ParamIdenTree){
-        super()
+export class InterfaceTree extends BlockTree{
+    constructor(public name:string,child:BlockTree[],modifier:modifier,public of:string){
+        super(name,child,modifier)
     }
 }
-export class VariableTree extends Tree{
-    constructor(public name:string,public value:ExprTree,public modifier:modifier){
-        super()
+export class FunctionTree extends BlockTree{
+    constructor(public name:string,public command:CommandTree[],modifier:modifier,public args:ParamIdenTree){
+        super(name,null, modifier)
+    }
+}
+export class VariableTree extends BlockTree{
+    constructor(public name:string,public value:ExprTree,modifier:modifier){
+        super(name,null,modifier)
     }
 }
 export class ImportTree extends Tree{
@@ -35,8 +38,8 @@ export class ImportTree extends Tree{
         super()
     }
 }
-export class FileTree extends Tree{
+export class FileTree extends BlockTree{
     constructor(public imports:ImportTree[],public block:BlockTree[]){
-        super()
+        super('',block,null)
     }
 }

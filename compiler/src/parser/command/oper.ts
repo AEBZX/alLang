@@ -37,7 +37,6 @@ export function _set_expr(tool:TokenStream,token:string,_exp:any){
     tool.next()
     let expr2=expr(tool)
     if(expr2==null)allang_log.error('缺少表达式',tool.now().line)
-    if(tool.now().name!=';')allang_log.error('缺少分号',tool.now().line)
     return new _exp(expr1,expr2)
 }
 export function _name_expr(tool:TokenStream,token:string,_exp:any){
@@ -75,7 +74,6 @@ export function var_command_expr(tool:TokenStream){
     tool.next()
     let exp=expr(tool)
     if(exp==null)allang_log.error('缺少表达式',tool.now().line)
-    if(tool.now().name!=';')allang_log.error('缺少分号',tool.now().line)
     return new VarTree(iden,exp)
 }
 export function vm_expr(tool:TokenStream){
@@ -84,7 +82,6 @@ export function vm_expr(tool:TokenStream){
     tool.next()
     if(tool.now().type!=token_type.string)allang_log.error('缺少字符串',tool.now().line)
     let command=tool.next().name
-    if(tool.now().name!=';')allang_log.error('缺少分号',tool.now().line)
     return new VMTree(command)
 }
 export function call_expr(tool:TokenStream){
@@ -107,7 +104,6 @@ export function _t_expr(tool:TokenStream,token:string,_exp:any){
     tool.next()
     let _expr=expr(tool)
     if(_expr==null)allang_log.error('缺少表达式',tool.now().line)
-    if(tool.now().name!=';')allang_log.error('缺少分号',tool.now().line)
     return new _exp(_expr)
 }
 export function _post_expr(tool:TokenStream,token:string,_exp:any){

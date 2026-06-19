@@ -104,6 +104,9 @@ export function function_expr(tool:TokenStream,data:BlockData){
     return new FunctionTree(data.name,command,data.modifier,params)
 }
 export function class_expr(tool:TokenStream,data:BlockData){
+    data.modifier._static=true
+    data.modifier._async=false
+    data.modifier._public=true
     if(tool.now().name!='class')return null
     tool.next()
     let _implements='Lang.ObjectInterface'
@@ -120,6 +123,9 @@ export function class_expr(tool:TokenStream,data:BlockData){
     return new ClassTree(data.name,<BlockTree[]>body,data.modifier,_implements)
 }
 export function interface_expr(tool:TokenStream,data:BlockData){
+    data.modifier._static=true
+    data.modifier._async=false
+    data.modifier._public=true
     if(tool.now().name!='interface')return null
     tool.next()
     let _of='Lang.ObjectInterface'
@@ -137,6 +143,9 @@ export function interface_expr(tool:TokenStream,data:BlockData){
     return new InterfaceTree(data.name,<BlockTree[]>body,data.modifier,_of)
 }
 export function module_expr(tool:TokenStream,data:BlockData){
+    data.modifier._static=true
+    data.modifier._async=false
+    data.modifier._public=true
     if(tool.now().name!='module')return null
     tool.next()
     if(tool.now().name!='{')allang_log.error('缺少块开始',tool.now().line)

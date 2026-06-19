@@ -80,12 +80,12 @@ describe('操作命令测试',()=>{
     })
     describe('call_expr',()=>{
         it('函数调用',()=>{
-            let tool=getStream('foo()')
+            let tool=getStream('foo();')
             let node=call_expr(tool)
             expect(node).toEqual(new CallTree(new ExprCallTree(new ExprIdenTree('foo'),[]),false))
         })
         it('await调用',()=>{
-            let tool=getStream('await foo()')
+            let tool=getStream('await foo();')
             let node=call_expr(tool)
             expect(node).toEqual(new CallTree(new ExprCallTree(new ExprIdenTree('foo'),[]),true))
         })
@@ -107,12 +107,12 @@ describe('操作命令测试',()=>{
             expect(node).toEqual(new ThrowTree(new ExprStringTree('"error"')))
         })
         it('break语句',()=>{
-            let tool=getStream('break')
+            let tool=getStream('break;')
             let node=oper(tool)
             expect(node).toEqual(new BreakTree())
         })
         it('continue语句',()=>{
-            let tool=getStream('continue')
+            let tool=getStream('continue;')
             let node=oper(tool)
             expect(node).toEqual(new ContinueTree())
         })
@@ -122,7 +122,7 @@ describe('操作命令测试',()=>{
             expect(node).toEqual(new SetTree(new ExprIdenTree('a'),new ExprNumberTree(1)))
         })
         it('函数调用语句',()=>{
-            let tool=getStream('foo()')
+            let tool=getStream('foo();')
             let node=oper(tool)
             expect(node).toEqual(new CallTree(new ExprCallTree(new ExprIdenTree('foo'),[]),false))
         })
@@ -131,12 +131,12 @@ describe('操作命令测试',()=>{
 describe('控制流测试',()=>{
     describe('if_expr',()=>{
         it('if单条无else',()=>{
-            let tool=getStream('if(a)break')
+            let tool=getStream('if(a)break;')
             let node=if_expr(tool)
             expect(node).toEqual(new IfTree(new ExprIdenTree('a'),[new BreakTree()],[]))
         })
         it('if-else',()=>{
-            let tool=getStream('if(a)break else continue')
+            let tool=getStream('if(a)break; else continue;')
             let node=if_expr(tool)
             expect(node).toEqual(new IfTree(new ExprIdenTree('a'),[new BreakTree()],[new ContinueTree()]))
         })
@@ -151,21 +151,21 @@ describe('控制流测试',()=>{
     })
     describe('while_expr',()=>{
         it('while循环',()=>{
-            let tool=getStream('while(a)break')
+            let tool=getStream('while(a)break;')
             let node=while_expr(tool)
             expect(node).toEqual(new WhileTree(new ExprIdenTree('a'),[new BreakTree()],false))
         })
     })
     describe('do_while_expr',()=>{
         it('do-while循环',()=>{
-            let tool=getStream('do break while(a)')
+            let tool=getStream('do break; while(a)')
             let node=do_while_expr(tool)
             expect(node).toEqual(new WhileTree(new ExprIdenTree('a'),[new BreakTree()],true))
         })
     })
     describe('for_expr',()=>{
         it('for循环',()=>{
-            let tool=getStream('for(var a:number=0;a<10;)break')
+            let tool=getStream('for(var a:number=0;a<10;)break;')
             let node=for_expr(tool)
             expect(node).toEqual(new ForTree(
                 [new VarTree(new VarIdenTree('a',new NumberTypeTree()),new ExprNumberTree(0))],
@@ -177,7 +177,7 @@ describe('控制流测试',()=>{
     })
     describe('foreach_expr',()=>{
         it('foreach循环',()=>{
-            let tool=getStream('foreach(a:number:arr)break')
+            let tool=getStream('foreach(a:number:arr)break;')
             let node=foreach_expr(tool)
             expect(node).toEqual(new ForeachTree(
                 new VarIdenTree('a',new NumberTypeTree()),
@@ -188,7 +188,7 @@ describe('控制流测试',()=>{
     })
     describe('switch_expr',()=>{
         it('switch语句',()=>{
-            let tool=getStream('switch(a){case 1->break default break}')
+            let tool=getStream('switch(a){case 1->break; default break;}')
             let node=switch_expr(tool)
             expect(node).toEqual(new SwitchTree(
                 new ExprIdenTree('a'),
@@ -199,7 +199,7 @@ describe('控制流测试',()=>{
     })
     describe('try_expr',()=>{
         it('try-catch',()=>{
-            let tool=getStream('try break catch(e:number):void->{}')
+            let tool=getStream('try break; catch(e:number):void->{}')
             let node=try_expr(tool)
             expect(node).toEqual(new TryTree(
                 [new BreakTree()],

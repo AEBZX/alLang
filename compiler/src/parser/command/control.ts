@@ -1,4 +1,4 @@
-import {commands_expr,command_expr} from './index'
+import {command_expr, commands_expr} from './index'
 import {
     CommandTree,
     ExprLambdaTree,
@@ -11,31 +11,24 @@ import {
     WhileTree
 } from '../../tree'
 import {TokenStream} from 'allang-compiler-base'
-import {theses_expr} from '../expr/primary'
+import {lambda_expr, theses_expr} from '../expr/primary'
 import allang_log from '../../base/allang_log'
 import {var_command_expr} from './oper'
 import {var_expr} from '../iden'
 import expr from '../expr'
-import {lambda_expr} from '../expr/primary'
+
 export function if_expr(tool:TokenStream){
     if(!tool.hasMore())return null
+    //匹配if
     if(tool.now().name!='if')return null
     tool.next()
+    //匹配(cond)
     let cond=theses_expr(tool)
     if(cond==null)allang_log.error('缺少条件',tool.now().line)
-    let call:CommandTree[]=[]
-    if(tool.now().name!='{'){
-        call[0]=command_expr(tool)
-        if(call[0]==null)allang_log.error('缺少命令',tool.now().line)
-    }else call=commands_expr(tool)
-    let else_call:CommandTree[]=[]
-    if(tool.hasMore()&&tool.now().name==';')tool.next()
-    if(!tool.hasMore()||tool.now().name!='else')return new IfTree(cond,call,else_call)
+    let call=commands_expr(tool)
+    if(!tool.hasMore()||tool.now().name!='else')return new IfTree(cond,call,[])
     tool.next()
-    if(tool.now().name!='{'){
-        else_call[0]=command_expr(tool)
-        if(else_call[0]==null)allang_log.error('缺少命令',tool.now().line)
-    }else else_call=commands_expr(tool)
+    let else_call=commands_expr(tool)
     return new IfTree(cond,call,else_call)
 }
 export function while_expr(tool:TokenStream){
@@ -44,22 +37,14 @@ export function while_expr(tool:TokenStream){
     tool.next()
     let cond=theses_expr(tool)
     if(cond==null)allang_log.error('缺少条件',tool.now().line)
-    let call:CommandTree[]=[]
-    if(tool.now().name!='{'){
-        call[0]=command_expr(tool)
-        if(call[0]==null)allang_log.error('缺少命令',tool.now().line)
-    }else call=commands_expr(tool)
+    let call=commands_expr(tool)
     return new WhileTree(cond,call,false)
 }
 export function do_while_expr(tool:TokenStream){
     if(!tool.hasMore())return null
     if(tool.now().name!='do')return null
     tool.next()
-    let call:CommandTree[]=[]
-    if(tool.now().name!='{'){
-        call[0]=command_expr(tool)
-        if(call[0]==null)allang_log.error('缺少命令',tool.now().line)
-    }else call=commands_expr(tool)
+    let call=commands_expr(tool)
     if(tool.now().name!='while')allang_log.error('缺少while',tool.now().line)
     tool.next()
     let cond=theses_expr(tool)
@@ -71,7 +56,7 @@ export function for_expr(tool:TokenStream){
     if(tool.now().name!='for')return null
     tool.next()
     let init:CommandTree[]=[]
-    let cond:ExprTree=null
+    let cond:ExprTree
     let step:CommandTree[]=[]
     if(tool.now().name!='(')allang_log.error('缺少条件起始',tool.now().line)
     tool.next()
@@ -97,11 +82,7 @@ export function for_expr(tool:TokenStream){
     }
     if(tool.now().name!=')')allang_log.error('缺少条件结束',tool.now().line)
     tool.next()
-    let call:CommandTree[]=[]
-    if(tool.now().name!='{'){
-        call[0]=command_expr(tool)
-        if(call[0]==null)allang_log.error('缺少命令',tool.now().line)
-    }else call=commands_expr(tool)
+    let call=commands_expr(tool)
     return new ForTree(init,cond,step,call)
 }
 export function foreach_expr(tool:TokenStream){
@@ -118,11 +99,7 @@ export function foreach_expr(tool:TokenStream){
     if(exp==null)allang_log.error('缺少被迭代对象',tool.now().line)
     if(tool.now().name!=')')allang_log.error('缺少迭代结束',tool.now().line)
     tool.next()
-    let call:CommandTree[]=[]
-    if(tool.now().name!='{'){
-        call[0]=command_expr(tool)
-        if(call[0]==null)allang_log.error('缺少命令',tool.now().line)
-    }else call=commands_expr(tool)
+    let call=commands_expr(tool)
     return new ForeachTree(iden,exp,call)
 }
 export function case_expr(tool:TokenStream){
@@ -133,23 +110,14 @@ export function case_expr(tool:TokenStream){
     if(exp==null)allang_log.error('缺少表达式',tool.now().line)
     if(tool.now().name!='->')allang_log.error('缺少箭头',tool.now().line)
     tool.next()
-    let call:CommandTree[]=[]
-    if(tool.now().name!='{'){
-        call[0]=command_expr(tool)
-        if(call[0]==null)allang_log.error('缺少命令',tool.now().line)
-    }else call=commands_expr(tool)
+    let call=commands_expr(tool)
     return {condition:exp,call:call}
 }
 export function default_expr(tool:TokenStream){
     if(!tool.hasMore())return null
     if(tool.now().name!='default')return null
     tool.next()
-    let call:CommandTree[]=[]
-    if(tool.now().name!='{'){
-        call[0]=command_expr(tool)
-        if(call[0]==null)allang_log.error('缺少命令',tool.now().line)
-    }else call=commands_expr(tool)
-    return call
+    return commands_expr(tool)
 }
 export function switch_expr(tool:TokenStream){
     if(!tool.hasMore())return null
@@ -177,11 +145,7 @@ export function try_expr(tool:TokenStream){
     if(!tool.hasMore())return null
     if(tool.now().name!='try')return null
     tool.next()
-    let _try:CommandTree[]=[]
-    if(tool.now().name!='{'){
-        _try[0]=command_expr(tool)
-        if(_try[0]==null)allang_log.error('缺少命令',tool.now().line)
-    }else _try=commands_expr(tool)
+    let _try=commands_expr(tool)
     if(tool.now().name!='catch')allang_log.error('缺少catch关键字',tool.now().line)
     tool.next()
     let _catch:ExprLambdaTree=lambda_expr(tool)
@@ -189,10 +153,7 @@ export function try_expr(tool:TokenStream){
     let _finally:CommandTree[]=[]
     if(tool.hasMore()&&tool.now().name=='finally'){
         tool.next()
-        if(tool.now().name!='{'){
-            _finally[0]=command_expr(tool)
-            if(_finally[0]==null)allang_log.error('缺少命令',tool.now().line)
-        }else _finally=commands_expr(tool)
+        _finally=commands_expr(tool)
     }
     return new TryTree(_try,_catch,_finally)
 }
