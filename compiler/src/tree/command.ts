@@ -15,11 +15,6 @@ export class VarTree extends CommandTree{
         super()
     }
 }
-export class SetTree extends CommandTree{
-    constructor(public name:ExprTree,public value:ExprTree){
-        super()
-    }
-}
 export class CallTree extends CommandTree{
     constructor(public name:ExprTree,public await:boolean){
         super()
@@ -46,7 +41,7 @@ export class WhileTree extends CommandTree{
     }
 }
 export class ForTree extends CommandTree{
-    constructor(public init:CommandTree[],public condition:ExprTree,public step:CommandTree[],public call:CommandTree[]){
+    constructor(public init:VarTree[],public condition:ExprTree,public step:CommandTree[],public call:CommandTree[]){
         super()
     }
 }
@@ -70,54 +65,64 @@ export class TryTree extends CommandTree{
         super()
     }
 }
-export class AddSetTree extends CommandTree{
+export class OperSetTree extends CommandTree{
     constructor(public name:ExprTree,public value:ExprTree){
         super()
     }
 }
-export class SubSetTree extends CommandTree{
-    constructor(public name:ExprTree,public value:ExprTree){
-        super()
+export class SetTree extends OperSetTree{
+    constructor(name:ExprTree,value:ExprTree){
+        super(name,value)
     }
 }
-export class MulSetTree extends CommandTree{
-    constructor(public name:ExprTree,public value:ExprTree){
-        super()
+export class AddSetTree extends OperSetTree{
+    constructor(name:ExprTree,value:ExprTree){
+        super(name,value)
     }
 }
-export class DivSetTree extends CommandTree{
-    constructor(public name:ExprTree,public value:ExprTree){
-        super()
+export class SubSetTree extends OperSetTree{
+    constructor(name:ExprTree,value:ExprTree){
+        super(name,value)
     }
 }
-export class ModSetTree extends CommandTree{
-    constructor(public name:ExprTree,public value:ExprTree){
-        super()
+export class MulSetTree extends OperSetTree{
+    constructor(name:ExprTree,value:ExprTree){
+        super(name,value)
     }
 }
-export class AndSetTree extends CommandTree{
-    constructor(public name:ExprTree,public value:ExprTree){
-        super()
+export class DivSetTree extends OperSetTree{
+    constructor(name:ExprTree,value:ExprTree){
+        super(name,value)
     }
 }
-export class OrSetTree extends CommandTree{
-    constructor(public name:ExprTree,public value:ExprTree){
-        super()
+export class ModSetTree extends OperSetTree{
+    constructor(name:ExprTree,value:ExprTree){
+        super(name,value)
     }
 }
-export class XorSetTree extends CommandTree{
-    constructor(public name:ExprTree,public value:ExprTree){
-        super()
+export class AndSetTree extends OperSetTree{
+    constructor(name:ExprTree,value:ExprTree){
+        super(name,value)
     }
 }
-export class ShiftLeftSetTree extends CommandTree{
-    constructor(public name:ExprTree,public value:ExprTree){
-        super()
+export class OrSetTree extends OperSetTree{
+    constructor(name:ExprTree,value:ExprTree){
+        super(name,value)
     }
 }
-export class ShiftRightSetTree extends CommandTree{
-    constructor(public name:ExprTree,public value:ExprTree){
-        super()
+export class XorSetTree extends OperSetTree{
+    constructor(name:ExprTree,value:ExprTree){
+        super(name,value)
+    }
+}
+export class ShiftLeftSetTree extends OperSetTree{
+    constructor(name:ExprTree,value:ExprTree){
+        super(name,value)
+    }
+}
+export class ShiftRightSetTree extends OperSetTree{
+    constructor(name:ExprTree,value:ExprTree){
+        super(name,value)
     }
 }
 export class IncrementTree extends CommandTree{
@@ -127,6 +132,11 @@ export class IncrementTree extends CommandTree{
 }
 export class DecrementTree extends CommandTree{
     constructor(public name:ExprTree){
+        super()
+    }
+}
+export class ListTree extends CommandTree{
+    constructor(public child:CommandTree[]){
         super()
     }
 }

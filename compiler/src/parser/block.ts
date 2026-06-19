@@ -109,7 +109,7 @@ export function class_expr(tool:TokenStream,data:BlockData){
     data.modifier._public=true
     if(tool.now().name!='class')return null
     tool.next()
-    let _implements='Lang.ObjectInterface'
+    let _implements='ObjectInterface'
     if(tool.now().name=='implements'){
         tool.next()
         if(tool.now().type!=token_type.identifier)allang_log.error('缺少接口名称',tool.now().line)
@@ -128,7 +128,7 @@ export function interface_expr(tool:TokenStream,data:BlockData){
     data.modifier._public=true
     if(tool.now().name!='interface')return null
     tool.next()
-    let _of='Lang.ObjectInterface'
+    let _of='ObjectInterface'
     if(data.name=='ObjectInterface')_of=''
     if(tool.now().name=='of'){
         tool.next()

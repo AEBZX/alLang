@@ -16,6 +16,7 @@ import allang_log from '../../base/allang_log'
 import {var_command_expr} from './oper'
 import {var_expr} from '../iden'
 import expr from '../expr'
+import {ListTree} from "../../tree/command";
 
 export function if_expr(tool:TokenStream){
     if(!tool.hasMore())return null
@@ -157,7 +158,11 @@ export function try_expr(tool:TokenStream){
     }
     return new TryTree(_try,_catch,_finally)
 }
-export default function (tool:TokenStream){
+export function list_expr(tool:TokenStream){
+    if(!tool.hasMore())return null
+    return new ListTree(commands_expr(tool))
+}
+export default function (tool:TokenStream) {
     return while_expr(tool)
         || do_while_expr(tool)
         || for_expr(tool)
@@ -165,5 +170,6 @@ export default function (tool:TokenStream){
         || switch_expr(tool)
         || try_expr(tool)
         || if_expr(tool)
+        || list_expr(tool)
         || null
 }
