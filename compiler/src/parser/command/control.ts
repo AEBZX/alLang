@@ -160,6 +160,8 @@ export function try_expr(tool:TokenStream){
 }
 export function list_expr(tool:TokenStream){
     if(!tool.hasMore())return null
+    // 避免与 commands_expr 产生循环递归, 仅在 { 开头时匹配
+    if(tool.now().name!='{')return null
     return new ListTree(commands_expr(tool))
 }
 export default function (tool:TokenStream) {

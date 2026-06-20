@@ -11,10 +11,9 @@ import {
     ImportTree,
     InterfaceTree,
     ModuleTree,
-    VariableTree
+    VariableTree,FileTree
 } from '../tree'
 import {commands_expr} from './command'
-import {FileTree} from "../tree/block";
 
 export class BlockData{
     constructor(public name:string,public modifier:modifier){
@@ -86,7 +85,7 @@ export function variable_expr(tool:TokenStream,data:BlockData){
         value=expr(tool)
         if(value==null)allang_log.error('缺少变量值定义',tool.now().line)
     }
-    return new VariableTree(data.name,value,data.modifier)
+    return new VariableTree(data.name,type,value,data.modifier)
 }
 export function function_expr(tool:TokenStream,data:BlockData){
     if(tool.now().name!='function')return null
@@ -97,11 +96,28 @@ export function function_expr(tool:TokenStream,data:BlockData){
     if(params==null)allang_log.error('缺少函数参数',tool.now().line)
     if(tool.now().name==';'){
         tool.next()
-        return new FunctionTree(data.name,[],data.modifier,params)
+        return new FunctionTree(data.name,type,[],data.modifier,params)
     }
     let command=commands_expr(tool)
     if(command==null)allang_log.error('缺少函数命令体',tool.now().line)
-    return new FunctionTree(data.name,command,data.modifier,params)
+    return new FunctionTree(data.name,type,command,data.modifier,params)
+}
+export function dot_match(tool:TokenStream){
+    let name=''
+    while(tool.now().type==token_type.identifier){
+        name+=tool.now().name
+        tool.next()
+        if(!tool.hasMore())return name
+        if(tool.now().name=='.') {
+            name+='.'
+            tool.next()
+            if(tool.now().type!=token_type.identifier)allang_log.error('非法的.',tool.now().line)
+            continue
+        }
+        break
+    }
+    if(name=='')allang_log.error('缺少接口名称',tool.now().line)
+    return name
 }
 export function class_expr(tool:TokenStream,data:BlockData){
     data.modifier._static=true
@@ -109,11 +125,10 @@ export function class_expr(tool:TokenStream,data:BlockData){
     data.modifier._public=true
     if(tool.now().name!='class')return null
     tool.next()
-    let _implements='ObjectInterface'
+    let _implements='Lang.ObjectInterface'
     if(tool.now().name=='implements'){
         tool.next()
-        if(tool.now().type!=token_type.identifier)allang_log.error('缺少接口名称',tool.now().line)
-        _implements=tool.next().name
+        _implements=dot_match(tool)
     }
     if(tool.now().name!='{')allang_log.error('缺少块开始',tool.now().line)
     tool.next()
@@ -128,12 +143,11 @@ export function interface_expr(tool:TokenStream,data:BlockData){
     data.modifier._public=true
     if(tool.now().name!='interface')return null
     tool.next()
-    let _of='ObjectInterface'
+    let _of='Lang.ObjectInterface'
     if(data.name=='ObjectInterface')_of=''
     if(tool.now().name=='of'){
         tool.next()
-        if(tool.now().type!=token_type.identifier)allang_log.error('缺少接口名称',tool.now().line)
-        _of=tool.next().name
+        _of=dot_match(tool)
     }
     if(tool.now().name!='{')allang_log.error('缺少块开始',tool.now().line)
     tool.next()

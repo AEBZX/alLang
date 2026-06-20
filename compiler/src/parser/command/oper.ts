@@ -12,12 +12,11 @@ import {
     ShiftRightSetTree,
     SubSetTree, ThrowTree,
     VarTree, VMTree,
-    XorSetTree
+    XorSetTree,IncrementTree,DecrementTree
 } from '../../tree'
 import allang_log from '../../base/allang_log'
 import expr from '../expr'
 import {var_expr} from '../iden'
-import {DecrementTree, IncrementTree} from "../../tree/command";
 
 export function _set_expr(tool:TokenStream,token:string,_exp:any){
     let save=tool.save()

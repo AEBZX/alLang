@@ -1,5 +1,5 @@
 import {CommandTree} from './command'
-import {ParamIdenTree} from './iden'
+import {ParamIdenTree, TypeTree} from './iden'
 import {ExprTree} from './expr'
 import {Tree} from 'allang-compiler-base'
 import {modifier} from '../base/model'
@@ -24,12 +24,12 @@ export class InterfaceTree extends BlockTree{
     }
 }
 export class FunctionTree extends BlockTree{
-    constructor(public name:string,public command:CommandTree[],modifier:modifier,public args:ParamIdenTree){
+    constructor(public name:string,public type:TypeTree,public command:CommandTree[],modifier:modifier,public args:ParamIdenTree){
         super(name,null, modifier)
     }
 }
 export class VariableTree extends BlockTree{
-    constructor(public name:string,public value:ExprTree,modifier:modifier){
+    constructor(public name:string,public type:TypeTree,public value:ExprTree,modifier:modifier){
         super(name,null,modifier)
     }
 }

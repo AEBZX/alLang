@@ -5,7 +5,7 @@ import {
     CommandTree, ContinueTree, ExprLambdaTree,
     FileTree, ForeachTree, ForTree,
     FunctionTree,
-    InterfaceTree,
+    InterfaceTree, ListTree,
     ModuleTree,
     VariableTree, VarTree, WhileTree
 } from '../tree'
@@ -39,6 +39,7 @@ export class Structurer {
     }
     global_init(){
         let scan=(tree:BlockTree,name:string)=>{
+            if(!tree.child)return
             tree.child.forEach(i=>{
                 name=name!=''?name+'.'+i.name:i.name
                 if(i.modifier._static)this.global_blocked.set(name,i)
@@ -52,7 +53,7 @@ export class Structurer {
     }
     blocked_init(now:BlockTree){
         this.blocked=new Map()
-        now.child.forEach(i=>{
+        if(now.child) now.child.forEach(i=>{
             this.blocked.set(i.name,i)
         })
     }
@@ -67,8 +68,10 @@ export class Structurer {
     }
     class_check(tree:ClassTree){
         if(tree.implement=='')return
-        if(!this.has_block(tree.implement))
+        if(!this.has_block(tree.implement)){
             this.error.push(new GrammarError('未定义的接口'))
+            return
+        }
         let func=tree.child.filter(i=>i instanceof FunctionTree)
         let implements_func=this.implements_func_list(<InterfaceTree>this.get_block(tree.implement))
         implements_func.forEach(i=>{
@@ -98,6 +101,7 @@ export class Structurer {
             }
             if((i instanceof BreakTree||i instanceof ContinueTree)&&this.loop==0)
                 this.error.push(new GrammarError('循环外不能使用break和continue'))
+            if(i instanceof ListTree)this.commands_check(i.child)
         })
     }
     implements_func_list(i:InterfaceTree){
@@ -114,7 +118,10 @@ export class Structurer {
     }
     interface_check(tree:InterfaceTree){
         if(tree.of=='')return
-        if(this.has_block(tree.of))this.error.push(new GrammarError('未定义的接口'))
+        if(!this.has_block(tree.of)){
+            this.error.push(new GrammarError('未定义的接口'))
+            return
+        }
         if(!(this.get_block(tree.of) instanceof InterfaceTree))
             this.error.push(new GrammarError('类只能实现接口'))
     }
@@ -122,6 +129,7 @@ export class Structurer {
         this.global_init()
         let _check=(tree:BlockTree)=>{
             this.blocked_init(tree)
+            if(!tree.child)return
             tree.child.forEach(i=>{
                 if(i instanceof InterfaceTree)this.interface_check(i)
                 if(i instanceof ClassTree)this.class_check(i)

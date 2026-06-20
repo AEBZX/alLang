@@ -17,9 +17,8 @@ import {
     FileTree, ForeachTree, ForTree,
     FunctionTree, IfTree, InterfaceTree,
     ModuleTree, ReturnTree, SwitchTree, ThrowTree, TryTree,
-    VariableTree, VarTree, WhileTree
+    VariableTree, VarTree, WhileTree, DecrementTree, IncrementTree, OperSetTree, ListTree
 } from '../tree'
-import {DecrementTree, IncrementTree, OperSetTree} from "../tree/command";
 export class Resolver{
     error:GrammarError[]
     scope:Scope
@@ -248,6 +247,8 @@ export class Resolver{
                 this.commands_check(c._catch.body)
                 this.commands_check(c._finally)
             }
+            if(c instanceof ListTree)
+                this.commands_check(c.child)
         }
     }
     constructor(tree:FileTree[]) {
