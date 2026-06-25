@@ -217,9 +217,11 @@ export class Typer{
                 }else if(i instanceof AddSetTree){
                     this.type_check(i.value,'类型错误',NumberTypeTree,BooleanTypeTree)
                     this.type_check(i.name,'类型错误',NumberTypeTree)
+                    this._check(i.name,'类型错误',this.typer(i.value))
                 }else{
                     this.type_check(i.value,'类型错误',NumberTypeTree,BooleanTypeTree)
                     this.type_check(i.name,'类型错误',NumberTypeTree,BooleanTypeTree)
+                    this._check(i.name,'类型错误',this.typer(i.value))
                 }
             }
             if(i instanceof IncrementTree||i instanceof DecrementTree){
