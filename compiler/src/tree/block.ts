@@ -18,6 +18,11 @@ export class ClassTree extends BlockTree{
         super(name,child, modifier)
     }
 }
+export class EnumTree extends BlockTree{
+    constructor(public name:string,public data:string[],modifier:modifier){
+        super(name,[], modifier)
+    }
+}
 export class InterfaceTree extends BlockTree{
     constructor(public name:string,child:BlockTree[],modifier:modifier,public of:string){
         super(name,child,modifier)
