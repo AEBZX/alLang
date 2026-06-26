@@ -28,7 +28,6 @@ export function map_expr(tool:TokenStream){
         order_match(tool,expr(tool),token_name_match(tool,':'),expr(tool)),
         token_name_match(tool,','),token_name_match(tool,'}'))
 }
-//TODO lambda,map未实现
 export default function primary_expr(tool:TokenStream){
     return or_match(tool,value_expr(tool),
         iden_expr(tool),

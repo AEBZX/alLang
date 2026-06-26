@@ -3,9 +3,8 @@ export function token_name_match(tool:TokenStream,name:string):()=>any[]{
     if(!tool.hasMore())return null
     return ()=>[tool.now()?.name == name ? tool.next() : null]
 }
-export function token_type_match(tool:TokenStream,type:token_type):()=>any[]{
-    if(!tool.hasMore())return null
-    return ()=>[tool.now()?.type == type ? tool.next() : null]
+export function token_type_match(type:token_type):()=>any[]{
+    return (tool:TokenStream)=>[tool.now()?.type == type ? tool.next() : null]
 }
 export function order_match(tool:TokenStream,...match:(()=>any[])[]):()=>any[]{
     let ret=[]
@@ -37,8 +36,17 @@ export function loop_match(tool:TokenStream,match:()=>any[]):()=>any[]{
     return ()=>ret
 }
 export function while_match(tool:TokenStream,start:()=>any[],loop:()=>any[],
-                            split:()=>any[],end:()=>any[]){
-    return order_match(tool,start,loop,
-        loop_match(tool,order_match(tool,split,loop))
-        ,end)
+                            split:()=>any[],end:()=>any[]):()=>any[]{
+    let star=start()
+    let data=[]
+    let loop_data=loop()
+    let split_data: any[]
+    while(loop_data!=null){
+        data.push(loop_data)
+        split_data=split()
+        if(split_data==null)break
+        data.push(split_data)
+        loop_data=loop()
+    }
+    return ()=>[star,data,end()]
 }
