@@ -1,38 +1,53 @@
-import {loop_match, or_match, order_match, token_name_match, token_type_match, while_match} from './lib'
-import {token_type, TokenStream} from 'allang-compiler-base'
+import $ from './lib'
+import {token_type} from 'allang-compiler-base'
 
-export function basic_type(tool:TokenStream){
-    return order_match(tool,
-        token_name_match(tool,'string'),
-        token_name_match(tool,'number'),
-        token_name_match(tool,'void'),
-        token_name_match(tool,'boolean'),
-        lambda_type(tool),
-        _chain(tool),
-        order_match(tool,token_name_match(tool,'('),type(tool),token_name_match(tool,')'))
+export function basic_type(){
+    return $.o(
+        $.v('number'),
+        $.v('string'),
+        $.v('boolean'),
+        $.v('void')
     )
 }
-export function _chain(tool:TokenStream){
-    return while_match(tool,token_type_match(tool,token_type.identifier),
-        token_name_match(tool,'.'),token_type_match(tool,token_type.identifier),
-        token_type_match(tool,token_type.identifier))
-}
-export function args_iden(tool:TokenStream){
-    return while_match(tool,token_name_match(tool,'('),order_match(tool,
-        token_type_match(tool,token_type.identifier),
-        token_name_match(tool,':'),
-        type(tool)
-    ),token_name_match(tool,','),token_name_match(tool,')'))
-}
-export function lambda_type(tool:TokenStream){
-    return order_match(tool,args_iden(tool),token_name_match(tool,'=>'),type(tool))
-}
-export function type(tool:TokenStream){
-    return or_match(tool,order_match(tool,
-        basic_type(tool),
-        loop_match(tool,
-            or_match(tool,token_name_match(tool,'{}'),
-                token_name_match(tool,'[]'),token_name_match(tool,'*'))
+export function pack_type(){
+    return $.s(
+        basic_type(),
+        $.c(
+            $.l($.o(
+                $.v('[]'),
+                $.s($.v('{'),$.v('}')),
+                $.v('*')
+            ))
         )
-    ),basic_type(tool))
+    )
+}
+export function lambda_type(){
+    return $.s(
+        param(),
+        $.v('=>'),
+        type()
+    )
+}
+export function type(){
+    return $.o(
+        $.z(()=>$.s(
+            $.v('('),
+            type(),
+            $.v(')')
+        )),
+        $.z(()=>lambda_type()),
+        pack_type()
+    )
+}
+export function param(){
+    return $.w(
+        $.v('('),
+        $.s(
+            $.t(token_type.identifier),
+            $.v(':'),
+            type()
+        ),
+        $.v(','),
+        $.v(')')
+    )
 }

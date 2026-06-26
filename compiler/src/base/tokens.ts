@@ -38,7 +38,7 @@ export default [
     , _token('throw')
     , _token('vm')
     , _token('await')
-    , _token('import')
+    , _token('link')
     , _token('as')
     // 修饰符
     , _token('async')
@@ -113,4 +113,5 @@ export default [
     , _token('->')
     , _token('...')
     , _token('[]')
+    , _token('{}')
 ]

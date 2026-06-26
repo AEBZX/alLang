@@ -1,55 +1,120 @@
-import {loop_match, or_match, order_match, token_name_match, token_type_match, while_match} from './lib'
+import $ from './lib'
 import {token_type, TokenStream} from 'allang-compiler-base'
-import {_chain, args_iden, type} from './iden'
-import {commands} from './command'
 import expr from './expr'
+import command from './command'
+import {param, type} from './iden'
 
-export function link_block(tool:TokenStream):()=>any[]{
-    return loop_match(tool,order_match(tool,
-        token_name_match(tool,'link'),_chain(tool),token_name_match(tool,'as'),
-        token_type_match(tool,token_type.identifier),token_name_match(tool,';')))
+export function link(){
+    return $.c($.l(
+        $.s(
+            $.v('link'),
+            $.c($.w($.v('('),$.t(token_type.identifier),$.v('.'),$.v(')'))),
+            $.v('as'),
+            $.t(token_type.identifier),
+            $.v(';')
+        )
+    ))
 }
-export function modifier_block(tool:TokenStream){
-    return loop_match(tool,order_match(tool,
-        token_name_match(tool,'static'),token_name_match(tool,'unstatic')
-    ,token_name_match(tool,'public'),token_name_match(tool,'private')
-    ,token_name_match(tool,'async'),token_name_match(tool,'sync')))
+//辅助函数
+export function modifier(){
+    return $.c($.l(
+        $.o(
+            $.v('public'),
+            $.v('private'),
+            $.v('static'),
+            $.v('unstatic'),
+            $.v('async'),
+            $.v('sync')
+        )
+    ))
 }
-export function block(tool:TokenStream){
-    return order_match(tool,token_name_match(tool,'{'),
-        loop_match(tool,or_match(tool,func_block(tool),variable_block(tool),
-            class_block(tool),interface_block(tool),enum_block(tool),module_block(tool),)),
-        token_name_match(tool,'}'))
+export function block(){
+    return $.s(
+        $.v('{'),
+        $.l(
+            $.s(
+                modifier(),
+                $.t(token_type.identifier),
+                $.v(':'),
+                $.o(
+                    $.z(()=>function_block()),
+                    $.z(()=>var_block()),
+                    $.z(()=>class_block()),
+                    $.z(()=>enum_block()),
+                    $.z(()=>interface_block()),
+                    $.z(()=>module_block())
+                )
+            )
+        ),
+        $.v('}')
+    )
 }
-export function _block(tool:TokenStream,block:()=>any[]){
-    return order_match(tool,modifier_block(tool),token_type_match(tool,token_type.identifier),
-        token_name_match(tool,':')
-        ,block)
+export function function_block(){
+    return $.s(
+        $.v('function'),
+        type(),
+        param(),
+        command()
+    )
 }
-export function func_block(tool:TokenStream){
-    return _block(tool,order_match(tool,token_name_match(tool,'function'),
-        type(tool),args_iden(tool),commands(tool)))
+export function var_block(){
+    return $.s(
+        $.v('var'),
+        type(),
+        $.c(
+            $.s(
+                $.v('='),
+                expr()
+            )
+        ),
+        $.v(';')
+    )
 }
-export function variable_block(tool:TokenStream){
-    return _block(tool,or_match(tool,order_match(tool,token_name_match(tool,'variable'),
-        type(tool),token_name_match(tool,'='),expr(tool)),
-        order_match(tool,token_name_match(tool,'variable'),
-            type(tool))))
+export function class_block(){
+    return $.s(
+        $.v('class'),
+        $.c(
+            $.s(
+                $.v('implements'),
+                $.w($.v('('),$.t(token_type.identifier),$.v(','),$.v(')'))
+            )
+        ),
+        block()
+    )
 }
-export function class_block(tool:TokenStream){
-    return _block(tool,order_match(tool,token_name_match(tool,'class'),block(tool)))
+export function enum_block(){
+    return $.s(
+        $.v('enum'),
+        $.w($.v('{'),$.t(token_type.identifier),$.v(','),$.v('}'))
+    )
 }
-export function interface_block(tool:TokenStream){
-    return _block(tool,order_match(tool,token_name_match(tool,'interface'),block(tool)))
+export function interface_block(){
+    return $.s(
+        $.v('interface'),
+        $.c(
+            $.s(
+                $.v('of'),
+                $.w($.v('('),$.t(token_type.identifier),$.v(','),$.v(')'))
+            )
+        ),
+        block()
+    )
 }
-export function enum_block(tool:TokenStream){
-    return _block(tool,order_match(tool,token_name_match(tool,'enum'),
-        while_match(tool,token_name_match(tool,'{'),token_type_match(tool,token_type.identifier),
-            token_name_match(tool,','),token_name_match(tool,'}'))))
+export function module_block(){
+    return $.s(
+        $.v('module'),
+        block()
+    )
 }
-export function module_block(tool:TokenStream){
-    return _block(tool,order_match(tool,token_name_match(tool,'module'),block(tool)))
-}
-export default function (tool:TokenStream){
-    return order_match(tool,link_block(tool),module_block(tool))
+export default function(tool:TokenStream){
+    return $.seq(
+        tool,
+        link(),
+        $.s(
+            modifier(),
+            $.t(token_type.identifier),
+            $.v(':'),
+            module_block()
+        )
+    )
 }

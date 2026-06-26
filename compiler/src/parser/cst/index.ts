@@ -1,5 +1,6 @@
-import file from './block'
 import {TokenStream} from 'allang-compiler-base'
-export default function (tool:TokenStream){
-    return file(tool)()
+import entry from './block'
+
+export default function(tokens:TokenStream){
+    return entry(tokens).match()
 }
