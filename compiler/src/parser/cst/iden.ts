@@ -6,7 +6,8 @@ export function basic_type(){
         $.v('number'),
         $.v('string'),
         $.v('boolean'),
-        $.v('void')
+        $.v('void'),
+        $.w($.v('('),$.t(token_type.identifier),$.v('.'),$.v(')'))
     )
 }
 export function pack_type(){

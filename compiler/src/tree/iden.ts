@@ -4,7 +4,7 @@ export class NumberTypeTree extends TypeTree{}
 export class StringTypeTree extends TypeTree{}
 export class BooleanTypeTree extends TypeTree{}
 export class MapTypeTree extends TypeTree{
-    constructor(public type:ParamIdenTree){
+    constructor(public type:TypeTree){
         super()
     }
 }
@@ -31,6 +31,11 @@ export class VarIdenTree extends Tree{
 }
 export class ParamIdenTree extends Tree{
     constructor(public type:VarIdenTree[]){
+        super()
+    }
+}
+export class PointerTypeTree extends TypeTree{
+    constructor(public type:TypeTree){
         super()
     }
 }

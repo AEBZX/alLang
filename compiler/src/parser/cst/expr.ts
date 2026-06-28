@@ -1,6 +1,7 @@
 import $ from './lib'
 import {token_type} from 'allang-compiler-base'
-
+import {param} from './iden'
+import command from './command'
 export function primary(){
     return $.o(
         //直接量
@@ -18,7 +19,9 @@ export function primary(){
         //Map
         $.z(()=>$.w($.v('['),
             $.s($.t(token_type.identifier),$.v(':'),expr()),
-            $.v(','),$.v(']')))
+            $.v(','),$.v(']'))),
+        //lambda
+        $.z(()=>$.s(param(),$.v('=>'),$.o(command(),expr())))
     )
 }
 export function postfix(){
@@ -59,56 +62,59 @@ export function prefix(){
         postfix()
     )
 }
+// binary链: base + loop(同层运算符 + base) 确保base匹配失败时O(1)退出,避免组合爆炸
 function multi(){
-    let p=prefix()
-    return $.o(
-        $.z(()=>$.s(p,$.l($.s($.v('*'),p)))),
-        $.z(()=>$.s(p,$.l($.s($.v('/'),p)))),
-        $.z(()=>$.s(p,$.l($.s($.v('%'),p)))),
-        p
+    return $.s(
+        prefix(),
+        $.l($.s(
+            $.o($.v('*'),$.v('/'),$.v('%')),
+            prefix()
+        ))
     )
 }
 function add(){
-    let m=multi()
-    return $.o(
-        $.z(()=>$.s(m,$.l($.s($.v('+'),m)))),
-        $.z(()=>$.s(m,$.l($.s($.v('-'),m)))),
-        m
+    return $.s(
+        multi(),
+        $.l($.s(
+            $.o($.v('+'),$.v('-')),
+            multi()
+        ))
     )
 }
 function shift(){
-    let a=add()
-    return $.o(
-        $.z(()=>$.s(a,$.l($.s($.v('<<'),a)))),
-        $.z(()=>$.s(a,$.l($.s($.v('>>'),a)))),
-        a
+    return $.s(
+        add(),
+        $.l($.s(
+            $.o($.v('<<'),$.v('>>')),
+            add()
+        ))
     )
 }
 function rel(){
-    let s=shift()
-    return $.o(
-        $.z(()=>$.s(s,$.l($.s($.v('<'),s)))),
-        $.z(()=>$.s(s,$.l($.s($.v('>'),s)))),
-        $.z(()=>$.s(s,$.l($.s($.v('<='),s)))),
-        $.z(()=>$.s(s,$.l($.s($.v('>='),s)))),
-        s
+    return $.s(
+        shift(),
+        $.l($.s(
+            $.o($.v('<'),$.v('>'),$.v('<='),$.v('>=')),
+            shift()
+        ))
     )
 }
 function eq(){
-    let r=rel()
-    return $.o(
-        $.z(()=>$.s(r,$.l($.s($.v('=='),r)))),
-        $.z(()=>$.s(r,$.l($.s($.v('!='),r)))),
-        r
+    return $.s(
+        rel(),
+        $.l($.s(
+            $.o($.v('=='),$.v('!=')),
+            rel()
+        ))
     )
 }
 function bit(){
-    let e=eq()
-    return $.o(
-        $.z(()=>$.s(e,$.l($.s($.v('&'),e)))),
-        $.z(()=>$.s(e,$.l($.s($.v('^'),e)))),
-        $.z(()=>$.s(e,$.l($.s($.v('|'),e)))),
-        e
+    return $.s(
+        eq(),
+        $.l($.s(
+            $.o($.v('&'),$.v('^'),$.v('|')),
+            eq()
+        ))
     )
 }
 function lgc(){

@@ -39,7 +39,7 @@ export class ExprMapTree extends ExprPrimaryTree{
     }
 }
 export class ExprLambdaTree extends ExprPrimaryTree{
-    constructor(public args:ParamIdenTree,public ret:TypeTree,public body:CommandTree[]){
+    constructor(public args:ParamIdenTree,public ret:TypeTree|null,public body:CommandTree[]){
         super()
     }
 }

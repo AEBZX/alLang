@@ -5,8 +5,10 @@ function _token(keyword: string): word {
 }
 
 export default [
+      _token('[]')
+    , _token('{}')
     // 块定义关键字
-    _token('function')
+    , _token('function')
     , _token('class')
     , _token('interface')
     , _token('enum')
@@ -112,6 +114,4 @@ export default [
     , _token('=>')
     , _token('->')
     , _token('...')
-    , _token('[]')
-    , _token('{}')
 ]

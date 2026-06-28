@@ -31,27 +31,27 @@ export class VMTree extends CommandTree{
     }
 }
 export class IfTree extends CommandTree{
-    constructor(public condition:ExprTree,public call:CommandTree[],public _else:CommandTree[]){
+    constructor(public condition:ExprTree,public call:CommandTree,public _else:CommandTree){
         super()
     }
 }
 export class WhileTree extends CommandTree{
-    constructor(public condition:ExprTree,public value:CommandTree[],public _do:boolean){
+    constructor(public condition:ExprTree,public value:CommandTree,public _do:boolean){
         super()
     }
 }
 export class ForTree extends CommandTree{
-    constructor(public init:VarTree[],public condition:ExprTree,public step:CommandTree[],public call:CommandTree[]){
+    constructor(public init:CommandTree[],public condition:ExprTree,public step:CommandTree[],public call:CommandTree[]){
         super()
     }
 }
 export class ForeachTree extends CommandTree{
-    constructor(public name:VarIdenTree,public array:ExprTree,public call:CommandTree[]){
+    constructor(public name:VarIdenTree,public array:ExprTree,public call:CommandTree){
         super()
     }
 }
 export class SwitchTree extends CommandTree{
-    constructor(public value:ExprTree,public cases:{condition:ExprTree,call:CommandTree[]}[],public _default:CommandTree[]){
+    constructor(public value:ExprTree,public cases:{condition:ExprTree,call:CommandTree}[],public _default:CommandTree){
         super()
     }
 }
@@ -61,7 +61,7 @@ export class ThrowTree extends CommandTree{
     }
 }
 export class TryTree extends CommandTree{
-    constructor(public _try:CommandTree[],public _catch:ExprLambdaTree,public _finally:CommandTree[]){
+    constructor(public _try:CommandTree,public _catch:ExprLambdaTree,public _finally:CommandTree){
         super()
     }
 }
