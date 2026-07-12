@@ -28,13 +28,13 @@ export class IRFactory{
     }
 }
 export class ValuePool{
-    pool:Map<string,number>
+    pool:Map<string|number,number>
     constructor() {
         this.uuid=0
-        this.pool=new Map<string, number>()
+        this.pool=new Map<string|number, number>()
     }
     uuid:number
-    get(id:string):number{
+    get(id:string|number):number{
         if(!this.pool.has(id))
             this.pool.set(id,this.uuid++)
         return this.pool.get(id)
@@ -75,18 +75,9 @@ export class Command{
     }
 }
 export enum CommandType{
-    MOV_V_V,MOV_V_I,MOV_I_I,MOV_I_V,
-    LOAD,ADD_V,SUB_V,MUL_V,DIV_V,MOD_V,
-    AND_V,OR_V,XOR_V,SHL_V,SHR_V,
-    ADD_I,SUB_I,MUL_I,DIV_I,MOD_I,
-    AND_I,OR_I,XOR_I,SHL_I,SHR_I,
-    CMP_I_I,CMP_V_I,CMP_V_V,CMP_I_V,
-    CALL,CZ,RET,PUSH_V,PUSH_I,POP_V,POP_I,
-    IN_I,IN_V,OUT_I,OUT_V,THR_CALL,THR_CZ,
-    MOVA_V_V_V,MOVA_V_V_I,MOVA_V_I_I,MOVA_V_I_V,
-    MOVA_I_V_V,MOVA_I_V_I,MOVA_I_I_I,MOVA_I_I_V,
-    MOVC_V_I,MOVC_I_V,MOVC_I_I,MOVC_V_V,NOT_I,NOT_V,
-    MOVR_V,MOVR_I
+    LOAD_POOL,LOAD_REG,MOV,MOVM,MOVA,JMP,JMP_R,CALL,CALL_R,CFT,CFT_R
+    ,RET,CMP,ADD,SUB,MUL,DIV,MOD,AND,OR,XOR,SHL,SHR,
+    NOT,IN,OUT,PUSH,POP,MOV_R,MOVM_R,MOVA_R
 }
 export class Bool{
     static equal=1
